@@ -35,6 +35,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `1e53f78` feat: web app on livekit-client with session, stop, banners (Task 11)
 - `6b68ed4` chore: deploy config (backend Dockerfile, vercel.json, Neon-safe pool) (Task 12, partial)
 - `455226b` docs: README, latency report, record schema (Task 13)
+- `e1da6b0` fix: drop redundant agent notes, delete room when caller leaves (final review)
 
 ## Decisions made during the build
 
