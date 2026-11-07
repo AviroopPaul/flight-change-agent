@@ -11,7 +11,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 2 | Catalog, flights, fare math | done | `9d3bc97` |
 | 3 | Field validators | done | `2b8307a` |
 | 4 | Session engine | done | `a9b51f9` |
-| 5 | Outcome, record, pricing | todo | |
+| 5 | Outcome, record, pricing | done | `cd71b2d` |
 | 6 | Store, outbox, delivery | todo | |
 | 7 | Public API, chat socket, rate limits | todo | |
 | 8 | LiveKit bridge, internal API | todo | |
@@ -26,6 +26,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `9d3bc97` feat: seeded bookings, flight generator, fare quotes (Task 2)
 - `2b8307a` feat: field validators and normalizers (Task 3)
 - `a9b51f9` feat: pure session engine with chat queue and conflicts (Task 4)
+- `cd71b2d` feat: outcome rules, record builder, pricing (Task 5)
 
 ## Decisions made during the build
 

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import Settings
 from app.core.db import create_pool, migrate
+from app.records.router import router as records_router
 
 log = logging.getLogger("app")
 
@@ -33,6 +34,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(records_router)
 
     @app.get("/health")
     async def health(request: Request):
