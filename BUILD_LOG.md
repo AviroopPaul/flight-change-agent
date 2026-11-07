@@ -24,6 +24,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 ## Commits
 - `1fd02f4` chore: scaffold backend, postgres, schema (Task 1)
 - `9d3bc97` feat: seeded bookings, flight generator, fare quotes (Task 2)
+- `2b8307a` feat: field validators and normalizers (Task 3)
 
 ## Decisions made during the build
 

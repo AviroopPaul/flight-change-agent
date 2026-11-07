@@ -94,3 +94,7 @@ def make_quote(booking: Booking, flight: Flight, now: datetime) -> Quote:
         refund_to=booking.payment_method if refund_due else None,
         expires_at=now + QUOTE_TTL,
     )
+
+
+# Seed bookings are static reference data; other domains read them through the service.
+from app.catalog.repository import get_booking, load_bookings  # noqa: E402,F401
