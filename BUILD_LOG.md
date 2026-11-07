@@ -12,7 +12,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 3 | Field validators | done | `2b8307a` |
 | 4 | Session engine | done | `a9b51f9` |
 | 5 | Outcome, record, pricing | done | `cd71b2d` |
-| 6 | Store, outbox, delivery | todo | |
+| 6 | Store, outbox, delivery | done | `42db1ee` |
 | 7 | Public API, chat socket, rate limits | todo | |
 | 8 | LiveKit bridge, internal API | todo | |
 | 9 | Sweep, startup recovery | todo | |
@@ -27,6 +27,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `2b8307a` feat: field validators and normalizers (Task 3)
 - `a9b51f9` feat: pure session engine with chat queue and conflicts (Task 4)
 - `cd71b2d` feat: outcome rules, record builder, pricing (Task 5)
+- `42db1ee` feat: transactional store, record outbox, idempotent delivery (Task 6)
 
 ## Decisions made during the build
 

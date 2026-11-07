@@ -31,6 +31,7 @@ NO_FLIGHTS = "No seats match that date and time. Please pick another date or a w
 PICK_LISTED = "Please pick one of the listed flights."
 OPT_OUT_LABEL = "Stop this request? Nothing will be changed."
 TYPED_WINS = "typed value preferred over spoken"
+WELCOME = "Hi! I can help you change your flight. Tap the call button above to start, or answer the questions here."
 
 FLIGHT_FIELDS = {"selectedFlight", "fareAcceptance"}
 REFUND_SKIPS = {"selectedFlight", "fareAcceptance", "contactEmail", "newTravelDate", "timeFlexibility"}
@@ -442,9 +443,9 @@ def answer_card(state: SessionState, request_id: str, value: Any, now: datetime,
     if card.purpose == "optOut":
         s.open_card = None
         if value is True:
-            events.append(Event("answer", {"field": "__optOut", "value": "Yes, stop"}))
+            events.append(Event("answer", {"requestId": card.id, "field": "__optOut", "value": "Yes, stop"}))
             return _opt_out(s, events)
-        events.append(Event("answer", {"field": "__optOut", "value": "No, continue"}))
+        events.append(Event("answer", {"requestId": card.id, "field": "__optOut", "value": "No, continue"}))
         events.append(_msg("Okay, let's carry on."))
         _advance(s, now, call_active, events)
         return _done(s, events)
@@ -455,7 +456,7 @@ def answer_card(state: SessionState, request_id: str, value: Any, now: datetime,
             return _done(s, events, Err("Please pick one of the options."))
         s.open_card = None
         label = next((o["label"] for o in card.options or [] if o["value"] == value), value)
-        events.append(Event("answer", {"field": card.field, "value": label}))
+        events.append(Event("answer", {"requestId": card.id, "field": card.field, "value": label}))
         s.chat_messages += 1
         _resolve(s, card.field, value, now, events)
         _advance(s, now, call_active, events)
@@ -470,7 +471,7 @@ def answer_card(state: SessionState, request_id: str, value: Any, now: datetime,
 
     s.chat_messages += 1
     s.open_card = None
-    events.append(Event("answer", {"field": name, "value": _display(card, value)}))
+    events.append(Event("answer", {"requestId": card.id, "field": name, "value": _display(card, value)}))
 
     if name == "passengerNames":
         f = s.fields[name]
@@ -665,3 +666,14 @@ def set_reason_category(state: SessionState, category: str) -> Result:
 
 def identity(state: SessionState) -> Result:
     return Result(_start(state), [], Ok())
+
+
+def welcome(state: SessionState) -> Result:
+    """The first chat connect: greet once."""
+    if state.locked:
+        return _locked(state)
+    s = _start(state)
+    if s.welcomed:
+        return _done(s, [])
+    s.welcomed = True
+    return _done(s, [_msg(WELCOME)])

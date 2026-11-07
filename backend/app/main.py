@@ -7,7 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import Settings
 from app.core.db import create_pool, migrate
+from app.chat.hub import Hub
+from app.chat.router import router as chat_router
 from app.records.router import router as records_router
+from app.sessions.router import router as sessions_router
 
 log = logging.getLogger("app")
 
@@ -23,11 +26,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
+            for t in list(app.state.tasks):
+                t.cancel()
             await app.state.http.aclose()
             await app.state.pool.close()
 
     app = FastAPI(title="Flight change agent", lifespan=lifespan)
     app.state.settings = settings
+    app.state.hub = Hub()
+    app.state.tasks = set()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -36,6 +43,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.include_router(records_router)
+    app.include_router(sessions_router)
+    app.include_router(chat_router)
 
     @app.get("/health")
     async def health(request: Request):

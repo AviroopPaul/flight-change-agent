@@ -3,10 +3,11 @@
 import secrets
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import asyncpg
 
+from app.core.ratelimit import SESSIONS_PER_IP_PER_HOUR, start_of_day
 from app.core.result import Err, Ok
 from app.records import service as records_service
 from app.records.builder import build_record
@@ -45,6 +46,28 @@ async def create_session(pool: asyncpg.Pool, ip_hash: str, now: datetime) -> str
     async with pool.acquire() as conn:
         await repo.insert_session(conn, sid, ip_hash, now, dump(new_state(sid)))
     return sid
+
+
+class RateLimited(Exception):
+    pass
+
+
+class DailyCapReached(Exception):
+    pass
+
+
+async def create_session_limited(pool: asyncpg.Pool, ip_hash: str, now: datetime, daily_cap: int) -> str:
+    async with pool.acquire() as conn:
+        if await repo.count_created_since(conn, now - timedelta(hours=1), ip_hash) >= SESSIONS_PER_IP_PER_HOUR:
+            raise RateLimited()
+        if await repo.count_created_since(conn, start_of_day(now)) >= daily_cap:
+            raise DailyCapReached()
+    return await create_session(pool, ip_hash, now)
+
+
+async def mark_chat_connected(pool: asyncpg.Pool, session_id: str, now: datetime) -> bool:
+    async with pool.acquire() as conn:
+        return await repo.mark_chat_connected(conn, session_id, now)
 
 
 async def load(pool: asyncpg.Pool, session_id: str) -> SessionState | None:
