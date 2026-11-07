@@ -14,7 +14,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 5 | Outcome, record, pricing | done | `cd71b2d` |
 | 6 | Store, outbox, delivery | done | `42db1ee` |
 | 7 | Public API, chat socket, rate limits | done | `3355355` |
-| 8 | LiveKit bridge, internal API | todo | |
+| 8 | LiveKit bridge, internal API | done | `02ce765` |
 | 9 | Sweep, startup recovery | todo | |
 | 10 | Voice agent | todo | |
 | 11 | Web app | todo | |
@@ -29,6 +29,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `cd71b2d` feat: outcome rules, record builder, pricing (Task 5)
 - `42db1ee` feat: transactional store, record outbox, idempotent delivery (Task 6)
 - `3355355` feat: public API, chat websocket with replay, rate limits (Task 7)
+- `02ce765` feat: livekit token/dispatch/data bridge and internal agent API (Task 8)
 
 ## Decisions made during the build
 

@@ -42,11 +42,14 @@ def record_summary(record: dict) -> str:
     return "I've saved your progress. You can finish in the chat."
 
 
-def after_apply(app: FastAPI, session_id: str, outcome: ApplyOutcome, origin: str = "chat") -> None:
+def after_apply(app: FastAPI, session_id: str, outcome: ApplyOutcome, origin: str = "chat",
+                deliver: bool = True) -> None:
     """origin: "chat", "agent" or "system". The agent already knows what its own tools did."""
     hub = app.state.hub
     for ev in outcome.events:
         hub.publish(session_id, ev.id, ev.kind, ev.payload)
+    if outcome.record is not None and deliver:
+        spawn(app, deliver_now(app))
     if outcome.call_active and origin != "agent":
         lk = app.state.livekit
         for ev in outcome.events:
@@ -55,5 +58,3 @@ def after_apply(app: FastAPI, session_id: str, outcome: ApplyOutcome, origin: st
         if outcome.record is not None:
             spawn(app, lk.send_event(session_id, "outcome", {
                 "outcome": outcome.record["outcome"], "summary": record_summary(outcome.record)}))
-    if outcome.record is not None:
-        spawn(app, deliver_now(app))

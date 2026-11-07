@@ -34,6 +34,7 @@ def settings() -> Settings:
         allowed_origins=["http://localhost:5173"],
         stub_url="http://test/stub/records",
         chat_autostart_seconds=0,
+        sweep_on_startup=False,
     )
 
 

@@ -144,3 +144,18 @@ async def touch_call(pool: asyncpg.Pool, session_id: str, now: datetime, user_ac
 async def active_calls(pool: asyncpg.Pool) -> int:
     async with pool.acquire() as conn:
         return await repo.count_active_calls(conn)
+
+
+async def idle_candidates(pool: asyncpg.Pool, cutoff: datetime) -> list[str]:
+    async with pool.acquire() as conn:
+        return await repo.idle_candidates(conn, cutoff)
+
+
+async def chat_waiting(pool: asyncpg.Pool, cutoff: datetime) -> list[str]:
+    async with pool.acquire() as conn:
+        return await repo.chat_waiting(conn, cutoff)
+
+
+async def stale_calls(pool: asyncpg.Pool, cutoff: datetime) -> list[str]:
+    async with pool.acquire() as conn:
+        return await repo.stale_calls(conn, cutoff)

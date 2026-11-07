@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     stub_url: str | None = None
     public_url: str = "http://localhost:8080"
     chat_autostart_seconds: float = 20.0
+    sweep_on_startup: bool = True
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
