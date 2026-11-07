@@ -36,6 +36,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `6b68ed4` chore: deploy config (backend Dockerfile, vercel.json, Neon-safe pool) (Task 12, partial)
 - `455226b` docs: README, latency report, record schema (Task 13)
 - `e1da6b0` fix: drop redundant agent notes, delete room when caller leaves (final review)
+- `423b27b` fix: Gemini LLM, chat order during calls, spoken dates, speech timing, fewer tool round trips (after first live test)
 
 ## Decisions made during the build
 
@@ -53,5 +54,5 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - **Live now (Task 12 done):** web https://flight-change-agent.vercel.app, backend https://flight-backend-820256992821.asia-south1.run.app (Cloud Run, `asia-south1`, max 1 instance), 5 secrets in Secret Manager, Cloud Scheduler job `flight-sweep` every 5 minutes. Prod chat check: 4/4 pass.
 - **Agent:** hosted on a new LiveKit Cloud project (`hunar-yc8zto2u`, region `ap-south`, agent `CA_rkA3QfFypR48`), so `memoji` is untouched. Its keys are `FLIGHT_LIVEKIT_*` in `secrets.zsh`. Prod browser check: 6/6 pass, including the call.
 - **Task 13 numbers:** at least 10 real calls on the deployed system, then paste p50/p95 latency and cost per completed session into the README.
-- **Your choice:** Groq Dev tier (paid, per use) to lift the 8k tokens/min limit before reviewers call.
+- **LLM moved to Gemini 3.5 Flash-Lite** (fallback 3.5 Flash) after Groq's free tier rate-limited the first live test; Groq Dev upgrades were paused. The current `GOOGLE_API_KEY` is on an AI Studio project without billing (free tier): needs a key from a billed project before heavy testing.
 - **Deferred minors:** chat autostart can race a cold-starting agent; no timeout on "waiting for the agent"; a PNR change does not re-check the date's same-day rule; the sweep re-advances idle chat sessions (no-op writes).

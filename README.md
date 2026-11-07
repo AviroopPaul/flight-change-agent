@@ -37,6 +37,7 @@ Browser (Vercel)
 - **Chat to call.** When the user answers in chat during a call, the backend sends a LiveKit data message (topic `session-events`) into the room. The agent adds a note to its context and acknowledges at once if nobody is speaking, or at its next turn.
 - **Call to chat.** The agent calls backend tools (`/internal/sessions/{id}/*`). They run the same engine and push the result to the chat socket.
 - **The agent holds no state it cannot rebuild.** On start it reads `/context` (field status, open card, focus, last 20 transcript turns, no passenger names).
+- **During a call, the chat keeps going on its own.** The agent opens the first box (the booking reference); the other typed fields then follow in order, so a missed request cannot leave a field unasked.
 - **One input card at a time.** The engine keeps a queue. It opens the next card only when the current one closes, and cancels a stale card (`inputCancel`), for example when the date changes after flights were listed.
 - **Code layout.** The backend is split by domain (`catalog`, `sessions`, `chat`, `calls`, `records`, `telemetry`, `jobs`). Only a domain's `repository.py` has SQL for its tables.
 
@@ -46,8 +47,8 @@ Browser (Vercel)
 
 | Field | Channel | Required | Validation and normalization |
 |---|---|---|---|
-| `changeReason` | call | yes | 3 to 500 characters. A small LLM call sets a category: `schedule`, `personal`, `medical`, `missedFlight` or `other`. |
-| `newTravelDate` | call | yes | ISO date only (the LLM resolves "next Friday"). Not past, at most 330 days ahead, not the current flight's day. |
+| `changeReason` | call | yes | 3 to 500 characters, not a bare greeting ("hey", "okay"). A small LLM call sets a category: `schedule`, `personal`, `medical`, `missedFlight` or `other`. |
+| `newTravelDate` | call | yes | ISO date only. The agent looks dates up in a 2-week calendar in its prompt and reads back the backend's wording ("Friday 13 November 2026"). Not past, at most 330 days ahead, not the current flight's day. |
 | `timeFlexibility` | call | yes | `morning`, `afternoon`, `evening` or `any` ("any time", "flexible" map to `any`). |
 | `pnr` | chat | yes | Uppercased, spaces removed, 6 letters or digits. Must exist, be `confirmed`, not flown, and depart in more than 3 hours. |
 | `passengerNames` | chat | yes | One card per passenger. Uppercased, punctuation and titles (MR, MRS, DR...) removed. Each must match a different name on the booking. Errors never show the real names. |
@@ -85,9 +86,9 @@ The JSON Schema of the record is in [docs/record.schema.json](docs/record.schema
 
 - **Voice:** LiveKit Cloud (free Build plan) and LiveKit Agents in Python. LiveKit handles WebRTC, barge-in, turn detection and call-drop reconnects, which saved the most work.
 - **STT / TTS:** Deepgram Nova-3 streaming and Aura-2. Fast, cheap, good on Indian English.
-- **LLM:** Groq `openai/gpt-oss-120b`, low reasoning effort, with `gpt-oss-20b` as a fallback. Fast first tokens and very cheap.
+- **LLM:** Gemini 3.5 Flash-Lite (minimal thinking), with 3.5 Flash as a fallback. The cheapest Flash model that was available, and reliable at tool calls. Groq's free tier rate-limited live calls.
 - **Backend:** FastAPI on Cloud Run (one instance, scales to zero) with Neon Postgres. Web: the starter UI on Vercel.
-- **Cost:** about **$0.06 per completed session** (estimate for a 3-minute call: STT $0.023, TTS $0.030, LLM $0.004, hosting $0). Measured numbers: see below.
+- **Cost:** about **$0.08 per completed session** (estimate for a 3-minute call: STT $0.023, TTS $0.030, LLM $0.023, hosting $0). Measured numbers: see below.
 
 ## Cost and latency
 
@@ -132,7 +133,7 @@ cd backend && uv run python ../scripts/latency_report.py --database-url "$NEON_D
 
 ## What I trust least
 
-- **Groq's free tier.** It allows 8,000 tokens per minute per model. One turn sends about 1,750 tokens, so a single fast caller can hit the limit. A live test hit a 429 on the third turn. The fallback to `gpt-oss-20b` helps, but the real fix is Groq's paid Dev tier.
+- **LLM quotas.** The first live test on Groq's free tier hit its 8,000 tokens per minute limit within a few turns, and the fallback model then got a date wrong. The agent now runs on Gemini; its key must be on a billed project, or the free daily quota runs out after a few sessions.
 - **LLM tool discipline.** The prompt asks the model to save focus, read dates back and request one chat card at a time. The backend enforces the rules that matter (validation, one card, no names), but the conversation quality still depends on the model following the prompt.
 - **The in-process chat hub.** It is correct only with one backend instance.
 
