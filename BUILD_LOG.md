@@ -18,7 +18,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 9 | Sweep, startup recovery | done | `b486d24` |
 | 10 | Voice agent | done | `5b1e36f` |
 | 11 | Web app | done | `1e53f78` |
-| 12 | Deploy | todo | |
+| 12 | Deploy | blocked (needs your OK for secrets) | config only |
 | 13 | Latency report, README | todo | |
 
 ## Commits

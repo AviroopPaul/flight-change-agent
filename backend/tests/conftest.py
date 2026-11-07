@@ -9,7 +9,7 @@ from app.core.config import Settings
 from app.core.db import create_pool, migrate
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql://dev:dev@localhost:5433/flight"
+    "TEST_DATABASE_URL", "postgresql://dev:dev@localhost:5433/flight_test"
 )
 TEST_TOKEN = "test-service-token"
 

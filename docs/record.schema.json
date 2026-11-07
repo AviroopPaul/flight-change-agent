@@ -1,0 +1,341 @@
+{
+  "$defs": {
+    "BookingRef": {
+      "properties": {
+        "pnr": {
+          "title": "Pnr",
+          "type": "string"
+        },
+        "route": {
+          "title": "Route",
+          "type": "string"
+        },
+        "originalFlight": {
+          "title": "Originalflight",
+          "type": "string"
+        },
+        "originalDeparture": {
+          "format": "date-time",
+          "title": "Originaldeparture",
+          "type": "string"
+        },
+        "fareClass": {
+          "enum": [
+            "saver",
+            "flex"
+          ],
+          "title": "Fareclass",
+          "type": "string"
+        },
+        "paymentMethod": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paymentmethod"
+        }
+      },
+      "required": [
+        "pnr",
+        "route",
+        "originalFlight",
+        "originalDeparture",
+        "fareClass"
+      ],
+      "title": "BookingRef",
+      "type": "object"
+    },
+    "Engagement": {
+      "properties": {
+        "calls": {
+          "default": 0,
+          "title": "Calls",
+          "type": "integer"
+        },
+        "callSeconds": {
+          "default": 0,
+          "title": "Callseconds",
+          "type": "integer"
+        },
+        "chatMessages": {
+          "default": 0,
+          "title": "Chatmessages",
+          "type": "integer"
+        }
+      },
+      "title": "Engagement",
+      "type": "object"
+    },
+    "QuoteRef": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "flightId": {
+          "title": "Flightid",
+          "type": "string"
+        },
+        "pax": {
+          "title": "Pax",
+          "type": "integer"
+        },
+        "oldFare": {
+          "title": "Oldfare",
+          "type": "integer"
+        },
+        "newFare": {
+          "title": "Newfare",
+          "type": "integer"
+        },
+        "changeFeePerPax": {
+          "title": "Changefeeperpax",
+          "type": "integer"
+        },
+        "net": {
+          "title": "Net",
+          "type": "integer"
+        },
+        "amountDue": {
+          "title": "Amountdue",
+          "type": "integer"
+        },
+        "refundDue": {
+          "title": "Refunddue",
+          "type": "integer"
+        },
+        "refundTo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Refundto"
+        },
+        "currency": {
+          "const": "INR",
+          "default": "INR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "flightId",
+        "pax",
+        "oldFare",
+        "newFare",
+        "changeFeePerPax",
+        "net",
+        "amountDue",
+        "refundDue",
+        "expiresAt"
+      ],
+      "title": "QuoteRef",
+      "type": "object"
+    },
+    "RecordConflict": {
+      "properties": {
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "callValue": {
+          "default": null,
+          "title": "Callvalue"
+        },
+        "chatValue": {
+          "default": null,
+          "title": "Chatvalue"
+        },
+        "resolution": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resolution"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "required": [
+        "field"
+      ],
+      "title": "RecordConflict",
+      "type": "object"
+    },
+    "RecordField": {
+      "properties": {
+        "value": {
+          "default": null,
+          "title": "Value"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "call",
+                "chat"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source"
+        },
+        "collectedAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Collectedat"
+        },
+        "status": {
+          "default": "missing",
+          "enum": [
+            "valid",
+            "missing",
+            "invalid"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "title": "RecordField",
+      "type": "object"
+    }
+  },
+  "description": "The one record a session produces per revision. Wire format is camelCase.",
+  "properties": {
+    "sessionId": {
+      "title": "Sessionid",
+      "type": "string"
+    },
+    "revision": {
+      "title": "Revision",
+      "type": "integer"
+    },
+    "requestType": {
+      "enum": [
+        "change",
+        "refund"
+      ],
+      "title": "Requesttype",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "completed",
+        "partial",
+        "optedOut",
+        "needsReview"
+      ],
+      "title": "Outcome",
+      "type": "string"
+    },
+    "outcomeReason": {
+      "title": "Outcomereason",
+      "type": "string"
+    },
+    "fields": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RecordField"
+      },
+      "title": "Fields",
+      "type": "object"
+    },
+    "conflicts": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RecordConflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "booking": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BookingRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "quote": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/QuoteRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "engagement": {
+      "$ref": "#/$defs/Engagement"
+    },
+    "costUsd": {
+      "title": "Costusd",
+      "type": "number"
+    },
+    "endedAt": {
+      "format": "date-time",
+      "title": "Endedat",
+      "type": "string"
+    }
+  },
+  "required": [
+    "sessionId",
+    "revision",
+    "requestType",
+    "outcome",
+    "outcomeReason",
+    "fields",
+    "engagement",
+    "costUsd",
+    "endedAt"
+  ],
+  "title": "FinalRecord",
+  "type": "object"
+}
