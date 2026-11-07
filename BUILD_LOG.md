@@ -7,7 +7,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 
 | # | Task | Status | Commit |
 |---|---|---|---|
-| 1 | Repo scaffold, Postgres, backend skeleton | done | (see git log) |
+| 1 | Repo scaffold, Postgres, backend skeleton | done | `1fd02f4` |
 | 2 | Catalog, flights, fare math | todo | |
 | 3 | Field validators | todo | |
 | 4 | Session engine | todo | |
@@ -22,8 +22,8 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 13 | Latency report, README | todo | |
 
 ## Commits
-
-- `chore: scaffold backend, postgres, schema` (Task 1)
+- `1fd02f4` chore: scaffold backend, postgres, schema (Task 1)
+- `9d3bc97` feat: seeded bookings, flight generator, fare quotes (Task 2)
 
 ## Decisions made during the build
 
