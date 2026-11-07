@@ -90,3 +90,7 @@ async def stale_calls(conn, cutoff: datetime) -> list[str]:
     rows = await conn.fetch(
         "select id from sessions where call_active and coalesce(call_seen_at, updated_at) < $1", cutoff)
     return [r["id"] for r in rows]
+
+
+async def count_active_calls(conn) -> int:
+    return await conn.fetchval("select count(*) from sessions where call_active")

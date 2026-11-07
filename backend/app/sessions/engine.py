@@ -677,3 +677,21 @@ def welcome(state: SessionState) -> Result:
         return _done(s, [])
     s.welcomed = True
     return _done(s, [_msg(WELCOME)])
+
+
+def call_started(state: SessionState) -> Result:
+    s = _start(state)
+    if not s.locked:
+        s.calls += 1
+    return _done(s, [])
+
+
+def call_ended(state: SessionState, seconds: int, now: datetime) -> Result:
+    """The call is over: count its time and let the chat take over."""
+    s = _start(state)
+    s.call_seconds += max(0, int(seconds))
+    events: list[Event] = []
+    if not s.locked:
+        s.requested = []
+        _advance(s, now, False, events)
+    return _done(s, events)

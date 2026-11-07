@@ -94,6 +94,7 @@ async def apply(
     now: datetime,
     user_activity: bool,
     idle: bool = False,
+    set_call_active: bool | None = None,
 ) -> ApplyOutcome:
     """Run one engine command in one transaction: lock, run, decide outcome, store events + record + state."""
     async with pool.acquire() as conn, conn.transaction():
@@ -101,6 +102,9 @@ async def apply(
         if row is None:
             raise SessionNotFound(session_id)
         call_active = row["call_active"]
+        if set_call_active is not None:
+            call_active = set_call_active
+            await repo.set_call(conn, session_id, set_call_active, now)
         before = SessionState.model_validate(row["state"])
         result = fn(before, call_active)
         state = result.state
@@ -130,3 +134,13 @@ async def apply(
             stored.append(StoredEvent(eid, ev.kind, ev.payload))
         await repo.save_state(conn, session_id, dump(state), now, user_activity, state.locked)
     return ApplyOutcome(state, stored, result.reply, record, call_active)
+
+
+async def touch_call(pool: asyncpg.Pool, session_id: str, now: datetime, user_activity: bool) -> None:
+    async with pool.acquire() as conn:
+        await repo.touch_call(conn, session_id, now, user_activity)
+
+
+async def active_calls(pool: asyncpg.Pool) -> int:
+    async with pool.acquire() as conn:
+        return await repo.count_active_calls(conn)
