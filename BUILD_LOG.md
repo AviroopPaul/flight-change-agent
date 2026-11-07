@@ -8,9 +8,9 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | # | Task | Status | Commit |
 |---|---|---|---|
 | 1 | Repo scaffold, Postgres, backend skeleton | done | `1fd02f4` |
-| 2 | Catalog, flights, fare math | todo | |
-| 3 | Field validators | todo | |
-| 4 | Session engine | todo | |
+| 2 | Catalog, flights, fare math | done | `9d3bc97` |
+| 3 | Field validators | done | `2b8307a` |
+| 4 | Session engine | done | `a9b51f9` |
 | 5 | Outcome, record, pricing | todo | |
 | 6 | Store, outbox, delivery | todo | |
 | 7 | Public API, chat socket, rate limits | todo | |
@@ -25,6 +25,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `1fd02f4` chore: scaffold backend, postgres, schema (Task 1)
 - `9d3bc97` feat: seeded bookings, flight generator, fare quotes (Task 2)
 - `2b8307a` feat: field validators and normalizers (Task 3)
+- `a9b51f9` feat: pure session engine with chat queue and conflicts (Task 4)
 
 ## Decisions made during the build
 
