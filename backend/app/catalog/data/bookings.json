@@ -1,0 +1,20 @@
+[
+  {"pnr": "ABC123", "status": "confirmed", "fareClass": "saver", "passengers": ["RAHUL SHARMA"],
+   "origin": "BLR", "destination": "DEL", "flightNo": "AQ808", "departure": {"days": 5, "time": "07:05"},
+   "farePerPax": 5400, "paymentMethod": "Visa •• 4242"},
+  {"pnr": "PQR456", "status": "confirmed", "fareClass": "saver", "passengers": ["ANANYA IYER", "KARTIK IYER"],
+   "origin": "BOM", "destination": "DEL", "flightNo": "AQ862", "departure": {"days": 9, "time": "18:40"},
+   "farePerPax": 6100, "paymentMethod": "Mastercard •• 1881"},
+  {"pnr": "FLX789", "status": "confirmed", "fareClass": "flex", "passengers": ["MEERA NAIR"],
+   "origin": "BLR", "destination": "BOM", "flightNo": "AQ833", "departure": {"days": 12, "time": "09:35"},
+   "farePerPax": 8900, "paymentMethod": "UPI •• kotak"},
+  {"pnr": "CNX111", "status": "cancelled", "fareClass": "saver", "passengers": ["ARJUN MEHTA"],
+   "origin": "DEL", "destination": "CCU", "flightNo": "AQ851", "departure": {"days": 6, "time": "11:15"},
+   "farePerPax": 5000, "paymentMethod": null},
+  {"pnr": "OLD222", "status": "confirmed", "fareClass": "saver", "passengers": ["SNEHA RAO"],
+   "origin": "HYD", "destination": "DEL", "flightNo": "AQ866", "departure": {"days": -2, "time": "08:00"},
+   "farePerPax": 4900, "paymentMethod": null},
+  {"pnr": "SON333", "status": "confirmed", "fareClass": "saver", "passengers": ["VIKRAM SINGH"],
+   "origin": "BLR", "destination": "DEL", "flightNo": "AQ877", "departure": {"hours": 2},
+   "farePerPax": 5200, "paymentMethod": null}
+]
