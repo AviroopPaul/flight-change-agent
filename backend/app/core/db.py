@@ -16,7 +16,8 @@ async def _init_conn(conn: asyncpg.Connection) -> None:
 
 
 async def create_pool(dsn: str) -> asyncpg.Pool:
-    return await asyncpg.create_pool(dsn, min_size=1, max_size=10, init=_init_conn)
+    # statement_cache_size=0: Neon's pooler runs in transaction mode.
+    return await asyncpg.create_pool(dsn, min_size=1, max_size=10, init=_init_conn, statement_cache_size=0)
 
 
 async def migrate(pool: asyncpg.Pool) -> None:

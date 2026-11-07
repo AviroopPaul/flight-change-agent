@@ -17,7 +17,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 8 | LiveKit bridge, internal API | done | `02ce765` |
 | 9 | Sweep, startup recovery | done | `b486d24` |
 | 10 | Voice agent | done | `5b1e36f` |
-| 11 | Web app | todo | |
+| 11 | Web app | done | `1e53f78` |
 | 12 | Deploy | todo | |
 | 13 | Latency report, README | todo | |
 
@@ -32,6 +32,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 - `02ce765` feat: livekit token/dispatch/data bridge and internal agent API (Task 8)
 - `b486d24` feat: idle sweep, startup recovery (Task 9)
 - `5b1e36f` feat: livekit voice agent with backend tools and resume (Task 10)
+- `1e53f78` feat: web app on livekit-client with session, stop, banners (Task 11)
 
 ## Decisions made during the build
 
