@@ -18,7 +18,7 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 | 9 | Sweep, startup recovery | done | `b486d24` |
 | 10 | Voice agent | done | `5b1e36f` |
 | 11 | Web app | done | `1e53f78` |
-| 12 | Deploy | blocked (needs your OK for secrets) | config only |
+| 12 | Deploy | partly live: backend, web, sweep done; agent blocked (LiveKit 1-agent limit) | see Commits |
 | 13 | Latency report, README | done except real numbers (need deploy) | `455226b` |
 
 ## Commits
@@ -50,7 +50,8 @@ Spec: [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/sup
 
 ## Left to do
 
-- **Task 12 deploy (blocked):** the permission classifier denied writing the API keys to GCP Secret Manager. Needs your OK. After that: Cloud Run backend, LiveKit Cloud agent (`lk project add` + `lk agent create`), Vercel web, Cloud Scheduler sweep, prod smoke.
+- **Live now:** web https://flight-change-agent.vercel.app, backend https://flight-backend-820256992821.asia-south1.run.app (Cloud Run, `asia-south1`, max 1 instance), 5 secrets in Secret Manager, Cloud Scheduler job `flight-sweep` every 5 minutes. Prod chat check: 4/4 pass.
+- **Agent not hosted yet:** the LiveKit Cloud free plan allows 1 agent, and `memoji` already uses it. Needs your choice (new LiveKit project, or replace `memoji`).
 - **Task 13 numbers:** at least 10 real calls on the deployed system, then paste p50/p95 latency and cost per completed session into the README.
 - **Your choice:** Groq Dev tier (paid, per use) to lift the 8k tokens/min limit before reviewers call.
 - **Deferred minors:** chat autostart can race a cold-starting agent; no timeout on "waiting for the agent"; a PNR change does not re-check the date's same-day rule; the sweep re-advances idle chat sessions (no-op writes).

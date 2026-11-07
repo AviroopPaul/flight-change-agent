@@ -2,7 +2,7 @@
 
 A voice + chat agent that helps an airline customer change an existing flight booking. The user talks on a web call and types awkward details (booking reference, names, flight choice, fare consent) in a web chat. Both channels share one session. The session ends in one sanitized, versioned record.
 
-- **Public URL:** _pending deploy (see [Deploy](#deploy))_
+- **Public URL:** https://flight-change-agent.vercel.app (backend: https://flight-backend-820256992821.asia-south1.run.app)
 - **Brief:** [Hunar.ai AI Engineer assignment](https://github.com/Hunar-ai/ai-engineer-assignment)
 - **Design spec:** [docs/superpowers/specs/2026-11-07-flight-change-agent-design.md](docs/superpowers/specs/2026-11-07-flight-change-agent-design.md)
 - **Build log:** [BUILD_LOG.md](BUILD_LOG.md)
