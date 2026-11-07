@@ -53,3 +53,8 @@ def test_clean_text_removes_dashes():
     assert clean_text("morning—afternoon") == "morning, afternoon"
     assert clean_text("a — b – c") == "a, b, c"
     assert clean_text("plain") == "plain"
+
+
+def test_answer_events_add_no_note():
+    """fieldUpdate already carries the answer; a second note only costs tokens."""
+    assert event_note("answer", {"field": "pnr"}) is None

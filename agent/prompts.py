@@ -94,14 +94,14 @@ def resume_line(ctx: dict) -> str | None:
     return f"Sorry, we got cut off. {question}"
 
 
-def event_note(kind: str, payload: dict) -> str:
+def event_note(kind: str, payload: dict) -> str | None:
     if kind == "fieldUpdate":
         field, status, summary = payload.get("field"), payload.get("status"), payload.get("summary", "")
         if status == "valid":
             return f"The user just submitted {field} in chat. It is valid. {summary}".strip()
         return f"The user just submitted {field} in chat. It is not valid: {summary}".strip()
     if kind == "answer":
-        return f"The user answered {payload.get('field')} in chat."
+        return None  # the fieldUpdate that follows says the same, with the result
     if kind == "message":
         return f"The chat showed this message: {payload.get('text', '')}"
     if kind == "outcome":

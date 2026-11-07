@@ -130,6 +130,8 @@ async def entrypoint(ctx: JobContext) -> None:
             await hang_up(f"{payload.get('summary', '')} Goodbye.")
             return
         note = event_note(kind, payload)
+        if note is None:
+            return
         chat_ctx = agent.chat_ctx.copy()
         chat_ctx.add_message(role="system", content=note)
         await agent.update_chat_ctx(chat_ctx)
@@ -152,7 +154,8 @@ async def entrypoint(ctx: JobContext) -> None:
     async def end_if_gone() -> None:
         await asyncio.sleep(USER_GONE_SECONDS)
         log.info("caller did not come back; ending")
-        ctx.shutdown("caller left")
+        # Delete the room, not just this job: a later call then gets a fresh room and dispatch.
+        await ctx.delete_room()
 
     def _on_left(p: rtc.RemoteParticipant) -> None:
         if p.kind != rtc.ParticipantKind.PARTICIPANT_KIND_AGENT:
