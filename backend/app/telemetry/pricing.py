@@ -3,16 +3,16 @@
 PRICES = {
     "deepgram_stt_per_min": 0.0077,
     "deepgram_tts_per_1k_chars": 0.030,
-    "groq_in_per_m": 0.15,
-    "groq_out_per_m": 0.60,
+    "llm_in_per_m": 0.30,  # Gemini 3.5 Flash-Lite (fallback 3.5 Flash costs more: 1.50 / 9.00)
+    "llm_out_per_m": 2.50,
     "livekit_per_min": 0.0,
 }
 
 _UNIT_COST = {
     "stt_seconds": PRICES["deepgram_stt_per_min"] / 60,
     "tts_chars": PRICES["deepgram_tts_per_1k_chars"] / 1000,
-    "llm_in_tokens": PRICES["groq_in_per_m"] / 1_000_000,
-    "llm_out_tokens": PRICES["groq_out_per_m"] / 1_000_000,
+    "llm_in_tokens": PRICES["llm_in_per_m"] / 1_000_000,
+    "llm_out_tokens": PRICES["llm_out_per_m"] / 1_000_000,
     "call_seconds": PRICES["livekit_per_min"] / 60,
 }
 

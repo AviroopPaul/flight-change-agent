@@ -14,7 +14,7 @@ async def test_usage_and_metrics_feed_cost(client, lk, sid, pool):
     assert rec["ok"] is True
     async with pool.acquire() as c:
         payload = await c.fetchval("select payload from records where session_id=$1", sid)
-    assert payload["costUsd"] == 0.0956
+    assert payload["costUsd"] == 0.1043
 
 
 async def test_bad_usage_kind_ok_false(client, lk, sid):

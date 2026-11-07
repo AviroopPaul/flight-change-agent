@@ -65,17 +65,24 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
     const agentHere = () => [...room.remoteParticipants.values()].some((p) => p.kind === ParticipantKind.AGENT);
     const markLive = () => ui.setCall(CallState.CONNECTED, "on call");
 
+    // Speech-to-text sends a caller's turn as several segments. Keep them in one bubble until the agent speaks.
+    let userTurn: { id: string; done: string } | null = null;
     room.registerTextStreamHandler(TRANSCRIPTION_TOPIC, async (reader, from) => {
       const attrs = reader.info.attributes ?? {};
-      const id = attrs["lk.segment_id"] ?? reader.info.id;
+      const segmentId = attrs["lk.segment_id"] ?? reader.info.id;
       const role = from.identity === room.localParticipant.identity ? Role.USER : Role.AGENT;
+      if (role === Role.AGENT) userTurn = null;
+      const turn = role === Role.USER ? (userTurn ??= { id: segmentId, done: "" }) : null;
+      const prefix = turn?.done ? `${turn.done} ` : "";
+      const id = turn ? turn.id : segmentId;
       let text = "";
       for await (const chunk of reader) {
         text += chunk;
-        ui.addTranscript({ role, text, final: false, id });
+        ui.addTranscript({ role, text: prefix + text, final: false, id });
       }
       const final = role === Role.AGENT || attrs["lk.transcription_final"] === "true";
-      ui.addTranscript({ role, text, final, id });
+      if (turn && final && userTurn === turn) turn.done = prefix + text;
+      ui.addTranscript({ role, text: prefix + text, final, id });
     });
 
     room

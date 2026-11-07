@@ -44,12 +44,6 @@ class ToolLogic:
     async def resolve_conflict(self, field: str, choice: str) -> str:
         return speak(await self.client.resolve_conflict(field, choice))
 
-    async def set_focus(self, field: str) -> str:
-        return speak(await self.client.set_focus(field))
-
-    async def set_reason_category(self, category: str) -> str:
-        return speak(await self.client.set_reason_category(category))
-
     async def switch_to_refund(self) -> str:
         return speak(await self.client.refund_instead())
 
@@ -110,17 +104,6 @@ class FlightAgent(Agent):
                                choice: Literal["callValue", "chatValue"]) -> str:
         """After the caller confirms which value is right when the call and the chat disagree."""
         return await self.logic.resolve_conflict(field, choice)
-
-    @function_tool()
-    async def set_focus(self, context: RunContext, field: AnyField) -> str:
-        """Call this right before you ask the caller about a field."""
-        return await self.logic.set_focus(field)
-
-    @function_tool()
-    async def set_reason_category(self, context: RunContext,
-                                  category: Literal["schedule", "personal", "medical", "missedFlight", "other"]) -> str:
-        """Classify the reason for the change, once you know it."""
-        return await self.logic.set_reason_category(category)
 
     @function_tool()
     async def switch_to_refund(self, context: RunContext) -> str:

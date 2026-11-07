@@ -102,3 +102,8 @@ def test_reason():
     assert normalize_reason("  work meeting moved ") == Ok("work meeting moved")
     assert isinstance(normalize_reason("x"), Err)
     assert isinstance(normalize_reason("a" * 501), Err)
+
+
+@pytest.mark.parametrize("raw", ["Hey.", "hi", "Okay", "yeah", "Hello!"])
+def test_reason_rejects_fillers(raw):
+    assert isinstance(normalize_reason(raw), Err)

@@ -55,6 +55,11 @@ FIELD_LABELS = {
 
 # ---------- helpers ----------
 
+def spoken_date(iso: str) -> str:
+    """'2026-11-13' -> 'Friday 13 November 2026' (the agent reads this back instead of doing date math)."""
+    return f"{date.fromisoformat(iso):%A %-d %B %Y}"
+
+
 def rupees(n: int) -> str:
     return f"₹{n:,}"
 
@@ -102,6 +107,8 @@ def _summary(state: SessionState, name: str, now: datetime) -> str:
         return "Fare accepted."
     if name == "changeReason":
         return f"Reason: {f.value}"
+    if name == "newTravelDate":
+        return spoken_date(f.value)
     return str(f.value)
 
 
@@ -293,11 +300,28 @@ def _conflict_card(state: SessionState, c: Conflict) -> InputCard:
 
 def _candidates(state: SessionState, call_active: bool) -> list[str]:
     if call_active:
-        return list(state.requested)
+        # The agent starts the chat (usually with pnr). After that the typed fields follow in order on
+        # their own, so a missed request (seen in a live call) can't leave a field unasked.
+        follow = [f for f in CHAT_ORDER if f not in state.requested] if _valid(state, "pnr") else []
+        return list(state.requested) + follow
     return CHAT_ORDER + ["changeReason", "newTravelDate", "timeFlexibility"]
 
 
 def _advance(state: SessionState, now: datetime, call_active: bool, events: list[Event]) -> None:
+    _open_next(state, now, call_active, events)
+    _track_focus(state)
+
+
+def _track_focus(state: SessionState) -> None:
+    """What the conversation is on now: the open chat box, else the next spoken field. Used to resume a call."""
+    if state.open_card is not None:
+        state.focus = state.open_card.field
+        return
+    spoken = ["changeReason", "newTravelDate", "timeFlexibility"]
+    state.focus = next((f for f in spoken if _applies(state, f) and not _valid(state, f)), None)
+
+
+def _open_next(state: SessionState, now: datetime, call_active: bool, events: list[Event]) -> None:
     if state.locked or state.opted_out or state.open_card is not None:
         return
     if not call_active:
@@ -400,6 +424,8 @@ def submit_call_value(state: SessionState, field: str, raw: Any, now: datetime, 
         _clear_flight(s, events, "The date or time changed.")
     events.append(_update(s, field, now))
     _advance(s, now, call_active, events)
+    if field == "newTravelDate":
+        return _done(s, events, Ok(f"Saved {spoken_date(value)}. Read this date back to the caller exactly."))
     return _done(s, events, Ok(value))
 
 

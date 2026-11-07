@@ -79,3 +79,12 @@ def test_tool_schemas_have_no_ambiguous_unions():
     for tool in agent.tools:
         schema = _json.dumps(utils.build_legacy_openai_schema(tool))
         assert "anyOf" not in schema, schema
+
+
+def test_no_round_trip_only_tools():
+    """Each tool call is a full LLM round trip; focus and category are handled by the backend."""
+    from tools import FlightAgent
+
+    names = {t.info.name if hasattr(t, "info") else t.__name__ for t in FlightAgent(client(), instructions="x").tools}
+    assert "set_focus" not in names and "set_reason_category" not in names
+    assert {"record_answer", "send_chat_request", "end_call"} <= names

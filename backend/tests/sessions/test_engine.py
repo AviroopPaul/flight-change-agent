@@ -267,3 +267,37 @@ def test_locked_rejects_everything(call):
 def test_unknown_field_is_err():
     r = submit_call_value(new_state("s1"), "shoeSize", "9", NOW, True)
     assert not r.reply.ok and r.reply.message == "Unknown field."
+
+
+def test_chat_fields_continue_in_order_during_call():
+    """A live call showed the agent never asked for names; the chat must keep going on its own."""
+    r = request_chat_input(new_state("s1"), "pnr", NOW, True)
+    r = answer_card(r.state, r.state.open_card.id, "ABC123", NOW, True)
+    assert r.state.open_card is not None and r.state.open_card.field == "passengerNames"
+    r = answer_card(r.state, r.state.open_card.id, "Rahul Sharma", NOW, True)
+    assert r.state.open_card.field == "contactEmail"
+    r = answer_card(r.state, r.state.open_card.id, None, NOW, True)
+    assert r.state.open_card is None  # flights wait for the spoken date and time of day
+
+
+def test_no_chat_card_during_call_before_agent_asks():
+    r = advance(new_state("s1"), NOW, True)
+    assert r.state.open_card is None
+
+
+def test_spoken_date_reply_reads_back_weekday():
+    r = submit_call_value(new_state("s1"), "newTravelDate", "2026-11-13", NOW, True)
+    assert r.reply.ok and "Friday 13 November 2026" in r.reply.value
+    upd = [e.payload for e in r.events if e.kind == "fieldUpdate"][0]
+    assert upd["summary"] == "Friday 13 November 2026"
+    assert r.state.fields["newTravelDate"].value == "2026-11-13"
+
+
+def test_focus_follows_the_conversation():
+    """The agent no longer spends an LLM round trip on set_focus; the engine tracks it."""
+    r = submit_call_value(new_state("s1"), "changeReason", "meeting moved", NOW, True)
+    assert r.state.focus == "newTravelDate"
+    r = request_chat_input(r.state, "pnr", NOW, True)
+    assert r.state.focus == "pnr"
+    r = answer_card(r.state, r.state.open_card.id, "ABC123", NOW, True)
+    assert r.state.focus == "passengerNames"

@@ -20,7 +20,7 @@ from livekit.agents import (
     room_io,
 )
 from livekit.agents.llm import FallbackAdapter
-from livekit.plugins import deepgram, openai, silero
+from livekit.plugins import deepgram, google, silero
 from livekit.plugins.turn_detector.english import EnglishModel
 
 from backend_client import BackendClient
@@ -35,7 +35,6 @@ AGENT_NAME = "flight-agent"
 EVENT_TOPIC = "session-events"
 MAX_CALL_SECONDS = 10 * 60
 USER_GONE_SECONDS = 90
-GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 server = AgentServer()
 
@@ -47,20 +46,25 @@ def prewarm(proc: JobProcess) -> None:
 server.setup_fnc = prewarm
 
 
-def groq_llm(model: str) -> openai.LLM:
-    return openai.LLM(model=model, base_url=GROQ_BASE_URL, api_key=os.environ["GROQ_API_KEY"],
-                      reasoning_effort="low", max_retries=1)
+def gemini_llm(model: str) -> google.LLM:
+    # "minimal" thinking: fastest first token; at "low" Flash-Lite once dropped a tool argument.
+    return google.LLM(model=model, api_key=os.environ["GOOGLE_API_KEY"], temperature=0.3,
+                      thinking_config={"thinking_level": "MINIMAL"})
 
 
 def build_session(vad) -> AgentSession:
     return AgentSession(
-        stt=deepgram.STT(model="nova-3", language=os.getenv("STT_LANGUAGE", "en-IN")),
-        # Groq's free tier allows 8k tokens/min per model; fall back to the 20b model's separate quota.
-        llm=FallbackAdapter([groq_llm(os.getenv("LLM_MODEL", "openai/gpt-oss-120b")),
-                             groq_llm(os.getenv("LLM_FALLBACK_MODEL", "openai/gpt-oss-20b"))]),
+        # endpointing_ms 25 (the plugin default) cut speech into short finals at every small pause.
+        stt=deepgram.STT(model="nova-3", language=os.getenv("STT_LANGUAGE", "en-IN"), endpointing_ms=400,
+                         smart_format=True, keyterm=["PNR", "booking reference", "refund"]),
+        # Cheapest working Gemini Flash (3.5 Flash-Lite), with 3.5 Flash if it fails.
+        llm=FallbackAdapter([gemini_llm(os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")),
+                             gemini_llm(os.getenv("LLM_FALLBACK_MODEL", "gemini-3.5-flash"))],
+                            attempt_timeout=10.0),  # Gemini rejects request deadlines under 10 s
         tts=deepgram.TTS(model=os.getenv("TTS_VOICE", "aura-2-thalia-en")),
         vad=vad,
-        turn_handling={"turn_detection": EnglishModel()},
+        # Wait a little longer before treating a pause as the end of the caller's turn.
+        turn_handling={"turn_detection": EnglishModel(), "endpointing": {"min_delay": 0.8, "max_delay": 4.0}},
         max_tool_steps=4,
     )
 

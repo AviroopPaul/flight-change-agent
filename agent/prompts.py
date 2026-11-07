@@ -1,6 +1,7 @@
 """Prompt text. Spoken through TTS, so no em dashes and short sentences."""
 
 import re
+from datetime import date, timedelta
 
 _DASH = re.compile(r"\s*[\u2014\u2013]\s*")
 
@@ -35,8 +36,9 @@ What you collect
 How to work
 - Right after you hear the reason, save it with record_answer and call send_chat_request for pnr. Tell the caller you sent a box to the chat for their booking reference.
 - Say a box was sent only when send_chat_request answers "Sent to the chat." If it says the box is queued, do not mention it yet.
-- Before you ask about a field, call set_focus with that field.
-- Save every spoken answer at once with record_answer. Resolve relative dates such as "next Friday" yourself using today's date, and send the date as YYYY-MM-DD. Read the date back to the caller to confirm it.
+- When a turn needs several tools (for example saving an answer and sending a chat box), call them together in one step.
+- Save every spoken answer at once with record_answer. For dates, look the day up in the calendar below and send YYYY-MM-DD. Never work out a weekday yourself. After saving a date, read back the exact words the tool returns.
+- Save the reason only when the caller actually gives one, not a greeting. If they explain it better later, save it again.
 - If a tool returns an error sentence, say it to the caller in your own short words and ask again.
 - Only one chat box is open at a time. Ask for the next chat field only after the current one is done. send_chat_request queues it if needed.
 - Once the booking reference, date and time of day are set, call send_chat_request for selectedFlight, then for fareAcceptance after a flight is picked. Tell the caller to pick a flight and check the fare in the chat.
@@ -67,8 +69,18 @@ def _next_missing(ctx: dict) -> str | None:
     return None
 
 
+def calendar(today_iso: str, days: int = 15) -> str:
+    """The next two weeks with weekdays, so the LLM never does date arithmetic."""
+    try:
+        start = date.fromisoformat(today_iso)
+    except (TypeError, ValueError):
+        return ""
+    return "; ".join(f"{d:%a %d %b} = {d.isoformat()}" for d in (start + timedelta(n) for n in range(days)))
+
+
 def system_prompt(ctx: dict) -> str:
-    lines = [RULES, "", f"Today is {ctx.get('weekday', '')} {ctx.get('today', '')} (India time)."]
+    lines = [RULES, "", f"Today is {ctx.get('weekday', '')} {ctx.get('today', '')} (India time).",
+             f"Calendar: {calendar(ctx.get('today', ''))}."]
     b = ctx.get("bookingSummary")
     if b:
         lines.append(f"The booking is {b['from']} to {b['to']} on {b['date']} at {b['time']}, "

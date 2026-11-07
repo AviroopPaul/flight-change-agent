@@ -102,8 +102,13 @@ def normalize_flex(raw) -> Ok | Err:
     return Ok(text) if text in WINDOWS else Err(E_FLEX)
 
 
+FILLERS = {"hey", "hi", "hello", "ok", "okay", "yes", "yeah", "yep", "no", "hmm", "um", "uh", "sure", "fine"}
+
+
 def normalize_reason(raw) -> Ok | Err:
     text = re.sub(r"\s+", " ", str(raw or "")).strip()
+    if re.sub(r"[^a-z ]", "", text.lower()).strip() in FILLERS:
+        return Err(E_REASON)  # a greeting is not a reason (a live call saved "Hey.")
     return Ok(text) if 3 <= len(text) <= 500 else Err(E_REASON)
 
 

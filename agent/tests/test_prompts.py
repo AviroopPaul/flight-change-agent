@@ -58,3 +58,9 @@ def test_clean_text_removes_dashes():
 def test_answer_events_add_no_note():
     """fieldUpdate already carries the answer; a second note only costs tokens."""
     assert event_note("answer", {"field": "pnr"}) is None
+
+
+def test_system_prompt_has_two_week_calendar():
+    p = system_prompt(CTX)
+    assert "Fri 13 Nov = 2026-11-13" in p
+    assert "Sat 21 Nov = 2026-11-21" in p
