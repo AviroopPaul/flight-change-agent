@@ -30,7 +30,7 @@ def settings() -> Settings:
         livekit_url="wss://test.livekit.cloud",
         livekit_api_key="lk_test_key",
         livekit_api_secret="lk_test_secret_that_is_long_enough_123456",
-        groq_api_key="gsk_test",
+        groq_api_key="",
         allowed_origins=["http://localhost:5173"],
         stub_url="http://test/stub/records",
         chat_autostart_seconds=0,

@@ -9,7 +9,9 @@ from app.core.clock import now_ist
 from app.core.http import parse_body
 from app.sessions import engine
 from app.sessions import service as sessions
+from app.sessions.classify import classify_reason
 from app.sessions.fields import ALL_FIELDS
+from app.sessions.models import Result
 
 MAX_ACTIVE_CALLS = 5
 public = APIRouter()
@@ -46,9 +48,19 @@ async def fields(session_id: str, request: Request):
         return body
     if body.field not in ALL_FIELDS:
         return UNKNOWN_FIELD
-    return await service.run(request.app, session_id,
-                             lambda s, ca: engine.submit_call_value(s, body.field, body.value, now_ist(), ca),
-                             user_activity=True)
+    category = None
+    if body.field == "changeReason" and body.value:
+        st = request.app.state
+        category = await classify_reason(str(body.value), st.settings.groq_api_key, st.http)
+
+    def submit(s, ca):
+        r = engine.submit_call_value(s, body.field, body.value, now_ist(), ca)
+        if category and r.reply.ok and r.state.fields["changeReason"].status == "valid":
+            c = engine.set_reason_category(r.state, category)
+            return Result(c.state, r.events + c.events, r.reply)
+        return r
+
+    return await service.run(request.app, session_id, submit, user_activity=True)
 
 
 @internal.post("/chat-input")

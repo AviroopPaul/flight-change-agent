@@ -109,3 +109,21 @@ async def test_focus_refund_optout_resolve(client, lk, sid):
     assert (await client.post(url(sid, "/refund-instead"), headers=AUTH)).json()["ok"] is True
     r = (await client.post(url(sid, "/opt-out"), headers=AUTH)).json()
     assert r["ok"] is True and r["outcome"] == "optedOut" and r["summary"]
+
+
+async def test_spoken_reason_gets_category(client, lk, sid, app):
+    app.state.settings.groq_api_key = "k"
+    import httpx
+    import respx
+
+    from app.sessions.classify import GROQ_URL
+
+    with respx.mock(assert_all_called=False) as mock:
+        mock.post(GROQ_URL).mock(return_value=httpx.Response(
+            200, json={"choices": [{"message": {"content": "schedule"}}]}))
+        mock.route(host="test").pass_through()
+        r = await client.post(url(sid, "/fields"), json={"field": "changeReason", "value": "meeting moved"},
+                              headers=AUTH)
+    assert r.json()["ok"] is True
+    ctx = (await client.get(url(sid, "/context"), headers=AUTH)).json()
+    assert ctx["state"]["reasonCategory"] == "schedule"
