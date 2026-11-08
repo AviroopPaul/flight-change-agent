@@ -44,5 +44,5 @@ async def test_daily_cap(client, app):
 async def test_get_session(client):
     sid = (await client.post("/sessions")).json()["sessionId"]
     r = await client.get(f"/sessions/{sid}")
-    assert r.json() == {"sessionId": sid, "locked": False, "outcome": None, "callActive": False}
+    assert r.json() == {"sessionId": sid, "locked": False, "outcome": None, "callActive": False, "openCard": None}
     assert (await client.get("/sessions/s_nope")).status_code == 404

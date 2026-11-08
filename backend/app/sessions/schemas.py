@@ -10,3 +10,4 @@ class SessionView(CamelModel):
     locked: bool
     outcome: str | None
     call_active: bool
+    open_card: dict | None = None

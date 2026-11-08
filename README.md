@@ -209,7 +209,16 @@ cd agent && uv run pytest -q
 
 ## HTTP endpoints
 
-- **Public:** `POST /sessions`, `GET /sessions/{id}`, `GET /sessions/{id}/timeline`, `POST /sessions/{id}/call-token`, `WS /chat?sessionId=&after=`, `GET /stub/records?sessionId=`, `GET /health`.
+```bash
+API=https://flight-backend-820256992821.asia-south1.run.app
+SID=$(curl -s -X POST $API/sessions | jq -r .sessionId)
+curl -s -X POST $API/sessions/$SID/answers -H 'content-type: application/json' -d '{"value":"ABC123"}' | jq .openCard.label
+curl -s -X POST $API/sessions/$SID/answers -H 'content-type: application/json' -d '{"value":"Rahul Sharma"}' | jq .openCard.label
+curl -s $API/sessions/$SID/timeline | jq .summary.fields.pnr
+```
+
+- **Public:** `POST /sessions`, `GET /sessions/{id}` (with the open card), `POST /sessions/{id}/answers`, `POST /sessions/{id}/stop`, `GET /sessions/{id}/timeline`, `POST /sessions/{id}/call-token`, `WS /chat?sessionId=&after=`, `GET /stub/records?sessionId=`, `GET /health`.
+- **Answer as the user over HTTP:** `POST /sessions/{id}/answers` with `{"value": ..., "requestId": "<optional>"}` runs the same engine command as the chat socket. Without `requestId` it answers the open card. If no card is open and no call is live, it first opens the next one (no 20 s wait). The reply has `ok`, `openCard`, `outcome` and `locked`. A rejected value returns 422 with `error`; a stale card or a finished session returns 409. `POST /sessions/{id}/stop` opens the stop confirm card; answer it with `true` to opt out. A page open on the same session shows HTTP answers after a reload.
 - **Internal** (header `Authorization: Bearer $SERVICE_TOKEN`): `GET /internal/sessions/{id}/context`, and `POST` to `.../fields`, `.../chat-input`, `.../conflicts/{field}/resolve`, `.../refund-instead`, `.../opt-out`, `.../focus`, `.../reason-category`, `.../call`, `.../transcript`, `.../usage`, `.../metrics`, plus `POST /internal/sweep` and `POST /stub/records`.
 
 ## Deploy

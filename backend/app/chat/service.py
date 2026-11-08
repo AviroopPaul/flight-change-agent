@@ -2,7 +2,6 @@
 
 import asyncio
 
-
 from fastapi import FastAPI
 
 from app.core.clock import now_ist
@@ -12,6 +11,7 @@ from app.sessions import service as sessions
 from app.sessions.classify import classify_reason
 from app.sessions.effects import after_apply
 from app.sessions.models import Result, SessionState
+from app.sessions.service import ApplyOutcome
 
 
 def _with_id(msg: dict, eid: int) -> dict:
@@ -89,17 +89,30 @@ async def on_connect(app: FastAPI, session_id: str) -> None:
 
 async def handle_client(app: FastAPI, session_id: str, msg: dict) -> list[dict]:
     """Apply one client message. Returns messages for this socket only."""
-    pool = app.state.pool
     kind = msg.get("type")
     if kind == "optOut":
-        out = await sessions.apply(pool, session_id, lambda s, ca: engine.ask_opt_out(s, now_ist()),
-                                   now=now_ist(), user_activity=True)
-        after_apply(app, session_id, out)
+        await stop(app, session_id)
         return []
     if kind != "inputResponse":
         return []
+    request_id = msg.get("requestId", "")
+    out = await submit_answer(app, session_id, request_id, msg.get("value"))
+    if not out.reply.ok and not any(e.kind == "inputError" for e in out.events):
+        return [{"type": "inputError", "requestId": request_id, "message": out.reply.message}]
+    return []
 
-    request_id, value = msg.get("requestId", ""), msg.get("value")
+
+async def stop(app: FastAPI, session_id: str) -> ApplyOutcome:
+    """The Stop button: open the confirm card."""
+    out = await sessions.apply(app.state.pool, session_id, lambda s, ca: engine.ask_opt_out(s, now_ist()),
+                               now=now_ist(), user_activity=True)
+    after_apply(app, session_id, out)
+    return out
+
+
+async def submit_answer(app: FastAPI, session_id: str, request_id: str, value) -> ApplyOutcome:
+    """The user answers one chat card. Same path for the socket and for HTTP."""
+    pool = app.state.pool
     state = await sessions.load(pool, session_id)
     category = None
     card = state.open_card if state else None
@@ -116,9 +129,21 @@ async def handle_client(app: FastAPI, session_id: str, msg: dict) -> list[dict]:
 
     out = await sessions.apply(pool, session_id, answer, now=now_ist(), user_activity=True)
     after_apply(app, session_id, out)
-    if not out.reply.ok and not any(e.kind == "inputError" for e in out.events):
-        return [{"type": "inputError", "requestId": request_id, "message": out.reply.message}]
-    return []
+    return out
 
 
+async def start_now(app: FastAPI, session_id: str) -> SessionState:
+    """HTTP access: greet and open the next chat card at once, with no 20 s wait for a call."""
+    pool = app.state.pool
+    await sessions.mark_chat_connected(pool, session_id, now_ist())
 
+    def start(s: SessionState, call_active: bool) -> Result:
+        w = engine.welcome(s)
+        if w.state.locked or w.state.open_card is not None or call_active:
+            return w
+        a = engine.advance(w.state, now_ist(), False)
+        return Result(a.state, w.events + a.events, a.reply)
+
+    out = await sessions.apply(pool, session_id, start, now=now_ist(), user_activity=False)
+    after_apply(app, session_id, out)
+    return out.state
