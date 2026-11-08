@@ -165,6 +165,12 @@ Start a call, give the reason, then end the call. Wait about 2 minutes.
 In any session, tap **Debug** in the top bar.
 **Expect:** a full-screen session timeline with stats (outcome, calls, chat answers, latency, tool calls, cost), the field status, and a list of every event: spoken lines, chat cards and answers, agent tool calls with their arguments and replies, state changes, turn latency and records. The lane chips hide or show each kind. Esc closes it.
 
+### 22. Answer over HTTP (expected: the answers show in the session)
+
+Run the `curl` lines in the README "HTTP endpoints" section. The first answer prints the name question, the second prints the email question.
+Then post `{"value":"CNX111"}` to a new session. **Expect:** status 422 and an error that says the booking is cancelled.
+Open the same `sessionId` in the browser. **Expect:** your answers are in the thread, and the email box is open.
+
 ## What to send back for a failure
 
 - The session id (from the URL)

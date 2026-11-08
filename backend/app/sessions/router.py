@@ -29,4 +29,9 @@ async def get(session_id: str, request: Request):
         return JSONResponse({"error": "Session not found."}, status_code=404)
     state = row["state"]
     return SessionView(session_id=session_id, locked=row["locked"], outcome=state.get("lastOutcome"),
-                       call_active=row["call_active"]).model_dump(by_alias=True)
+                       call_active=row["call_active"], open_card=_open_card(state)).model_dump(by_alias=True)
+
+
+def _open_card(state: dict) -> dict | None:
+    card = state.get("openCard")
+    return {k: v for k, v in card.items() if v is not None} if card else None
