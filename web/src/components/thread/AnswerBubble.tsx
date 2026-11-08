@@ -1,6 +1,7 @@
 import type { InputRequest } from "../../protocol";
 import type { Answer } from "../../state/conversation";
 import { FileRow } from "./FileRow";
+import { UserBubble } from "./Message";
 import { Stamp } from "./Stamp";
 
 interface Props {
@@ -15,10 +16,14 @@ interface Props {
 export function AnswerBubble({ spec, answer, acked, time, caption = true }: Props) {
   const files = answer.files ?? [];
   return (
-    <div className={`bubble user${acked ? " acked" : ""}`}>
-      {caption && <span className="caption">{spec.label || spec.field}</span>}
-      {files.length ? files.map((file, i) => <FileRow key={`${i}:${file.name}`} file={file} />) : answer.display}
-      <Stamp time={time} ticks={acked ? "sent" : "sending"} />
-    </div>
+    <UserBubble>
+      {caption && (
+        <span className="mb-0.5 block font-mono text-[10px] tracking-[0.14em] text-glow/80 uppercase">{spec.label || spec.field}</span>
+      )}
+      <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+        {files.length ? files.map((file, i) => <FileRow key={`${i}:${file.name}`} file={file} />) : answer.display}
+      </div>
+      <Stamp time={time} ticks={acked ? "sent" : "sending"} className="justify-end" />
+    </UserBubble>
   );
 }
