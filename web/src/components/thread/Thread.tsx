@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { MessagesSquare } from "lucide-react";
 import { useFollowBottom } from "../../hooks/useFollowBottom";
 import type { Answer, CardEntry, OpenCard, ThreadItem } from "../../state/conversation";
@@ -12,9 +12,10 @@ interface Props {
   onAnswer: (card: OpenCard, answer: Answer) => void;
   /** False while the drawer is closed: the floating cards take the input then, so the thread only shows it. */
   interactive: boolean;
+  footer?: ReactNode;
 }
 
-export function Thread({ items, cards, barCard, onAnswer, interactive }: Props) {
+export function Thread({ items, cards, barCard, onAnswer, interactive, footer }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useFollowBottom(scrollRef, items, cards);
   return (
@@ -25,6 +26,7 @@ export function Thread({ items, cards, barCard, onAnswer, interactive }: Props) 
           {items.map((item, i) => (
             <ThreadEntry key={item.key} item={item} prev={items[i - 1]} cards={cards} onAnswer={onAnswer} interactive={interactive} />
           ))}
+          {footer}
         </div>
       </div>
       <Composer card={interactive ? barCard : null} onAnswer={(answer) => barCard && onAnswer(barCard, answer)} />

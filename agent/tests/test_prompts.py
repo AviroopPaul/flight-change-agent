@@ -10,10 +10,18 @@ CTX = {
 }
 
 
-def test_resume_line_when_transcript_exists():
-    ctx = dict(CTX, transcript=[{"role": "agent", "text": "Hi"}], focus="pnr")
+def test_resume_line_after_a_crash_mid_call():
+    # The last call never ended cleanly (callActive still true): the caller was cut off.
+    ctx = dict(CTX, transcript=[{"role": "agent", "text": "Hi"}], focus="pnr", callActive=True)
     line = resume_line(ctx)
     assert line.startswith("Sorry, we got cut off.") and "booking reference" in line
+
+
+def test_resume_line_on_call_me_back():
+    # The last call ended normally and the caller called back: welcome them, continue at the current step.
+    ctx = dict(CTX, transcript=[{"role": "agent", "text": "Hi"}], focus="pnr", callActive=False)
+    line = resume_line(ctx)
+    assert line.startswith("Welcome back.") and "booking reference" in line and "cut off" not in line
 
 
 def test_resume_line_uses_next_missing_without_focus():

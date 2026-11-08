@@ -52,3 +52,9 @@ async def stub_list(conn, session_id: str | None, limit: int = 50) -> list[dict]
 async def latest_record(conn, session_id: str) -> dict | None:
     return await conn.fetchval(
         "select payload from records where session_id = $1 order by revision desc limit 1", session_id)
+
+
+async def revisions(conn, session_id: str) -> list[dict]:
+    rows = await conn.fetch("select revision, outcome, created_at, delivered_at, attempts from records"
+                            " where session_id = $1 order by revision", session_id)
+    return [dict(r) for r in rows]

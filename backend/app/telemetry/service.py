@@ -26,6 +26,11 @@ async def add_turn(pool: asyncpg.Pool, session_id: str, role: str, text: str) ->
         await repo.add_turn(conn, session_id, role, text)
 
 
+async def add_tool_call(pool: asyncpg.Pool, session_id: str, name: str, args: dict, ok: bool, result: str) -> None:
+    async with pool.acquire() as conn:
+        await repo.add_tool_call(conn, session_id, name, args, ok, result)
+
+
 async def add_usage(pool: asyncpg.Pool, session_id: str, kind: str, quantity: float) -> None:
     async with pool.acquire() as conn:
         await repo.add_usage(conn, session_id, kind, quantity)

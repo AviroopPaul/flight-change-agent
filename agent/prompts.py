@@ -102,14 +102,16 @@ def system_prompt(ctx: dict) -> str:
 
 
 def resume_line(ctx: dict) -> str | None:
-    """After a drop or restart: apologise and ask again for what we were on."""
+    """A later call in the same session continues at the current step. If the last call never ended
+    cleanly (callActive still set), the caller was cut off; otherwise they called back."""
     if not ctx.get("transcript"):
         return None
     focus = ctx.get("focus")
     if not focus or (_fields(ctx).get(focus) or {}).get("status") == "valid":
         focus = _next_missing(ctx)
     question = QUESTIONS.get(focus or "", "How can I help with the rest of your change?")
-    return f"Sorry, we got cut off. {question}"
+    opener = "Sorry, we got cut off." if ctx.get("callActive") else "Welcome back."
+    return f"{opener} {question}"
 
 
 def event_note(kind: str, payload: dict) -> str | None:

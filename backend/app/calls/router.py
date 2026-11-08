@@ -10,7 +10,7 @@ from app.core.http import parse_body
 from app.sessions import engine
 from app.sessions import service as sessions
 from app.sessions.classify import classify_reason
-from app.sessions.fields import ALL_FIELDS
+from app.sessions.fields import ALL_FIELDS, CALL_NATIVE
 from app.sessions.models import Result
 
 MAX_ACTIVE_CALLS = 5
@@ -60,7 +60,9 @@ async def fields(session_id: str, request: Request):
             return Result(c.state, r.events + c.events, r.reply)
         return r
 
-    return await service.run(request.app, session_id, submit, user_activity=True)
+    tool = "record_answer" if body.field in CALL_NATIVE else "note_spoken_value"
+    return await service.run(request.app, session_id, submit, user_activity=True,
+                             tool=tool, args={"field": body.field, "value": body.value})
 
 
 @internal.post("/chat-input")
@@ -71,7 +73,8 @@ async def chat_input(session_id: str, request: Request):
     if body.field not in ALL_FIELDS:
         return UNKNOWN_FIELD
     return await service.run(request.app, session_id,
-                             lambda s, ca: engine.request_chat_input(s, body.field, now_ist(), ca))
+                             lambda s, ca: engine.request_chat_input(s, body.field, now_ist(), ca),
+                             tool="send_chat_request", args={"field": body.field})
 
 
 @internal.post("/conflicts/{field}/resolve")
@@ -83,19 +86,20 @@ async def resolve(session_id: str, field: str, request: Request):
         return UNKNOWN_FIELD
     return await service.run(request.app, session_id,
                              lambda s, ca: engine.resolve_conflict(s, field, body.choice, now_ist(), ca),
-                             user_activity=True)
+                             user_activity=True, tool="resolve_conflict", args={"field": field, "choice": body.choice})
 
 
 @internal.post("/refund-instead")
 async def refund_instead(session_id: str, request: Request):
     return await service.run(request.app, session_id,
-                             lambda s, ca: engine.refund_instead(s, now_ist(), ca), user_activity=True)
+                             lambda s, ca: engine.refund_instead(s, now_ist(), ca), user_activity=True,
+                             tool="switch_to_refund")
 
 
 @internal.post("/opt-out")
 async def opt_out(session_id: str, request: Request):
     return await service.run(request.app, session_id, lambda s, ca: engine.opt_out(s, now_ist()),
-                             user_activity=True)
+                             user_activity=True, tool="stop_request")
 
 
 @internal.post("/focus")
@@ -105,7 +109,8 @@ async def focus(session_id: str, request: Request):
         return body
     if body.field not in ALL_FIELDS:
         return UNKNOWN_FIELD
-    return await service.run(request.app, session_id, lambda s, ca: engine.set_focus(s, body.field))
+    return await service.run(request.app, session_id, lambda s, ca: engine.set_focus(s, body.field),
+                             tool="set_focus", args={"field": body.field})
 
 
 @internal.post("/reason-category")
@@ -123,9 +128,10 @@ async def call(session_id: str, request: Request):
         return body
     if body.active:
         return await service.run(request.app, session_id, lambda s, ca: engine.call_started(s, now_ist()),
-                                 set_call_active=True)
+                                 set_call_active=True, tool="call", args={"active": True})
     return await service.run(request.app, session_id,
-                             lambda s, ca: engine.call_ended(s, body.seconds, now_ist()), set_call_active=False)
+                             lambda s, ca: engine.call_ended(s, body.seconds, now_ist()), set_call_active=False,
+                             tool="call", args={"active": False, "seconds": body.seconds})
 
 
 router = APIRouter()

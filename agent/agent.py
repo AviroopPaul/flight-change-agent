@@ -99,8 +99,8 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(on_shutdown)
     await ctx.connect()
+    context = await client.context()  # before call_status(True), so callActive tells a crash from a callback
     await client.call_status(True)
-    context = await client.context()
     agent = FlightAgent(client, instructions=system_prompt(context))
     session = build_session(ctx.proc.userdata["vad"], ctx.proc.userdata["gcp"])
     turns = TurnTracker()

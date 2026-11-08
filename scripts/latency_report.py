@@ -8,6 +8,7 @@ Usage (from backend/):
 
 import argparse
 import asyncio
+import json
 import statistics
 import sys
 from pathlib import Path
@@ -31,7 +32,7 @@ async def report(database_url: str, since: str | None) -> None:
 
     conn = await asyncpg.connect(database_url, statement_cache_size=0)
     try:
-        where, args = ("where at >= $1::date", [since]) if since else ("", [])
+        where, args = ("where at >= $1::text::date", [since]) if since else ("", [])
         rows = await conn.fetch(f"select eou_ms, llm_ttft_ms, tts_ttfb_ms, total_ms from turn_metrics {where}", *args)
         total = percentiles([r["total_ms"] for r in rows])
         print(f"turns: {total['n']}")
@@ -40,13 +41,20 @@ async def report(database_url: str, since: str | None) -> None:
                            ("tts_ttfb_ms", "TTS first byte")]:
             print(f"  {label:18} p50 {percentiles([r[col] for r in rows])['p50']}")
 
-        recs = await conn.fetch("select payload from records where outcome = 'completed'")
-        costs = [float(r["payload"]["costUsd"]) for r in recs]
+        rwhere = "and r.created_at >= $1::text::date" if since else ""
+        recs = await conn.fetch(f"select r.session_id, r.payload from records r where r.outcome = 'completed' {rwhere}", *args)
+        payloads = [(r["session_id"], json.loads(r["payload"]) if isinstance(r["payload"], str) else r["payload"])
+                    for r in recs]
+        # Only sessions with a call: a chat-only session costs almost nothing and would hide the call cost.
+        called = [(sid, p) for sid, p in payloads if (p.get("engagement") or {}).get("calls")]
+        costs = [float(p["costUsd"]) for _, p in called]
+        print(f"completed sessions: {len(payloads)}, with a call: {len(costs)}")
         if costs:
-            print(f"completed sessions: {len(costs)}  mean cost USD {statistics.mean(costs):.4f}")
+            print(f"cost per completed session with a call (USD): mean {statistics.mean(costs):.4f}"
+                  f"  p50 {statistics.median(costs):.4f}  max {max(costs):.4f}")
         usage = await conn.fetch(
-            "select u.kind, sum(u.quantity) as q from usage u join records r on r.session_id = u.session_id"
-            " and r.outcome = 'completed' group by u.kind")
+            "select kind, sum(quantity) as q from usage where session_id = any($1::text[]) group by kind",
+            [sid for sid, _ in called])
         if usage and costs:
             per = {k: round(v / len(costs), 5) for k, v in cost_breakdown([(r["kind"], r["q"]) for r in usage]).items()}
             print(f"mean cost per completed session by part (USD): {per}")

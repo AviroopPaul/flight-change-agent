@@ -27,8 +27,10 @@ interface Props {
   onPickMic: (deviceId: string) => void;
   onStop: () => void;
   stopDisabled: boolean;
-  /** The button that opens the conversation drawer, placed in the top bar. */
-  conversationButton: ReactNode;
+  /** The top bar buttons: New chat, Debug and Conversation. */
+  actions: ReactNode;
+  /** A call happened earlier and the request is still open: the call button offers to call back. */
+  callBack: boolean;
 }
 
 const STATE_TONE: Partial<Record<AgentState, string>> = {
@@ -40,7 +42,7 @@ const STATE_TONE: Partial<Record<AgentState, string>> = {
   failed: "bg-destructive",
 };
 
-export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, onCall, onMute, onPickMic, onStop, stopDisabled, conversationButton }: Props) {
+export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, onCall, onMute, onPickMic, onStop, stopDisabled, actions, callBack }: Props) {
   const inCall = isInCall(call.state);
   const live = call.state === CallState.CONNECTED;
   const orbTrack = orb === "speaking" ? voice.agentTrack : orb === "listening" && !voice.muted ? voice.micTrack : undefined;
@@ -65,7 +67,7 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
             <p className="text-[11px] text-muted-foreground">AI voice agent</p>
           </div>
         </div>
-        {conversationButton}
+        <div className="flex shrink-0 items-center gap-2">{actions}</div>
       </div>
 
       <div
@@ -86,12 +88,12 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
       {/* The orb and caption take the free space; the dock stays at the bottom like a phone call. */}
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 lg:gap-7">
         <VoiceOrb state={orb} audioTrack={orbTrack} volume={orbVolume} live={inCall} />
-        <Caption inCall={inCall} connecting={call.state === CallState.CONNECTING} caption={caption} />
+        <Caption inCall={inCall} connecting={call.state === CallState.CONNECTING} caption={caption} callBack={callBack} />
       </div>
 
       <div className="glass flex items-center gap-2 rounded-full p-1.5 shadow-[0_20px_60px_-20px_rgb(0_0_0/0.7)]">
         <MicControl inCall={live} muted={voice.muted} level={micLevel} mics={mics} onMute={onMute} onPick={onPickMic} />
-        <CallButton call={call} onCall={onCall} />
+        <CallButton call={call} onCall={onCall} callBack={callBack} />
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -116,7 +118,7 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
   );
 }
 
-function CallButton({ call, onCall }: { call: CallStatus; onCall: () => void }) {
+function CallButton({ call, onCall, callBack }: { call: CallStatus; onCall: () => void; callBack: boolean }) {
   const inCall = isInCall(call.state);
   const connecting = call.state === CallState.CONNECTING || call.state === CallState.RECONNECTING;
   return (
@@ -124,7 +126,7 @@ function CallButton({ call, onCall }: { call: CallStatus; onCall: () => void }) 
       type="button"
       onClick={onCall}
       disabled={call.disabled}
-      aria-label={inCall ? "End call" : "Start call"}
+      aria-label={inCall ? "End call" : callBack ? "Call me back" : "Start call"}
       className={cn(
         "flex h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
         inCall
@@ -133,12 +135,19 @@ function CallButton({ call, onCall }: { call: CallStatus; onCall: () => void }) 
       )}
     >
       {connecting ? <Loader2 className="size-5 animate-spin" /> : inCall ? <PhoneOff className="size-5" /> : <Phone className="size-4" />}
-      <span className={cn(inCall && "sr-only sm:not-sr-only")}>{inCall ? (connecting ? "Cancel" : "End") : "Start call"}</span>
+      <span className={cn(inCall && "sr-only sm:not-sr-only")}>{inCall ? (connecting ? "Cancel" : "End") : callBack ? "Call me back" : "Start call"}</span>
     </button>
   );
 }
 
-function Caption({ inCall, connecting, caption }: { inCall: boolean; connecting: boolean; caption?: Spoken }) {
+function Caption({ inCall, connecting, caption, callBack }: { inCall: boolean; connecting: boolean; caption?: Spoken; callBack: boolean }) {
+  if (!inCall && callBack) {
+    return (
+      <p className="max-w-sm text-center text-sm text-balance text-muted-foreground">
+        The call ended. Tap Call me back and the agent picks up where you left off, or keep going in the cards.
+      </p>
+    );
+  }
   if (!inCall) {
     return (
       <p className="max-w-sm text-center text-sm text-balance text-muted-foreground">
