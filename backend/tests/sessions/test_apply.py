@@ -19,7 +19,7 @@ async def test_apply_persists_state_and_events(pool):
     state = await load(pool, sid)
     assert state.open_card.id == out.state.open_card.id
     evs = await events_since(pool, sid, 0)
-    assert [(k) for _, k, _ in evs] == ["inputRequest"]
+    assert [e[1] for e in evs] == ["inputRequest"]
     assert await count(pool, "select version from sessions where id=$1", sid) == 1
 
 
@@ -72,5 +72,5 @@ async def test_concurrent_answers_one_wins(pool):
     kinds = [e.kind for e in a.events + b.events]
     assert kinds.count("answer") == 1 and kinds.count("inputError") == 1
     evs = await events_since(pool, sid, 0)
-    assert [k for _, k, _ in evs].count("answer") == 1
+    assert [e[1] for e in evs].count("answer") == 1
 

@@ -95,6 +95,7 @@ Run test 1 up to the fare box and tap **No**.
 
 On the call, give a reason, then type `ABC123` and `Rahul Sharma`. Say: **"Actually, I just want a refund instead."**
 **Expect:** the agent says a person will process the refund. The record has `outcome: needsReview` and `requestType: refund`.
+**Variant:** switch to a refund while the names box is still open, then say "thanks, bye". **Expect:** the agent does not hang up. It asks you to finish the names, and says goodbye only after the record shows.
 
 ### 9. Stop with the chat button (expected: `optedOut`)
 

@@ -352,3 +352,15 @@ def test_call_start_and_end_track_running_call():
     assert r.state.call_started_at == NOW
     r = engine.call_ended(r.state, 90, NOW + timedelta(seconds=90))
     assert r.state.call_started_at is None and r.state.call_seconds == 90
+
+
+def test_refund_reply_says_what_is_still_needed_and_to_wait():
+    # The live bug: switched to refund while the names box was open, and the agent said goodbye.
+    s = state_with(changeReason={"text": "sick"}, pnr="PQR456")
+    r = advance(s, NOW, True)
+    assert r.state.open_card.field == "passengerNames"
+    r = refund_instead(r.state, NOW, True)
+    msg = r.reply.value
+    assert "passenger names" in msg and "not finished" in msg
+    assert "Ask no new question until it is submitted" in msg
+    assert r.state.open_card.field == "passengerNames"  # the names box stays open

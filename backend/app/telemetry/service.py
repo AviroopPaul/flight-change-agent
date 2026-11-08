@@ -15,6 +15,12 @@ async def last_turns(pool: asyncpg.Pool, session_id: str, n: int = 20) -> list[d
         return await repo.last_turns(conn, session_id, n)
 
 
+async def all_turns(pool: asyncpg.Pool, session_id: str) -> list[tuple[int, str, str, object]]:
+    """Every spoken call line, for the chat history after a page reload."""
+    async with pool.acquire() as conn:
+        return await repo.all_turns(conn, session_id)
+
+
 async def add_turn(pool: asyncpg.Pool, session_id: str, role: str, text: str) -> None:
     async with pool.acquire() as conn:
         await repo.add_turn(conn, session_id, role, text)
