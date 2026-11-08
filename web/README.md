@@ -14,7 +14,8 @@
 This folder is a React + TypeScript page (Vite, Tailwind v4, shadcn/ui). It has two parts:
 
 - **Voice stage:** a glowing orb (LiveKit's Agents UI Aura shader) that reacts to the agent's state and to the voice of whoever is talking, a live caption, and a control dock with mute, a microphone picker, start or end call, and stop request.
-- **Chat panel:** one conversation thread with the live call transcript and the agent's input cards (one at a time), and a typing bar for typed answers. Each submitted input becomes a chat bubble. There is no backend; build yours with any stack. Using the starter is optional: edit it, or replace it with anything else.
+- **Floating cards (voice first):** each input the agent asks for floats as a card at the right (above the controls on phones) and leaves once answered. A rejected answer brings it back with the error. The final record floats the same way until closed.
+- **Conversation drawer:** closed by default, with an unread count on its button. It keeps the full thread: transcript, every card and answer, and the record. While it is open, its cards take the input and the floating cards hide. There is no backend; build yours with any stack. Using the starter is optional: edit it, or replace it with anything else.
 
 Needs Node 20.19+ or 22.12+:
 

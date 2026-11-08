@@ -24,7 +24,7 @@ export function Composer({ card, onAnswer }: Props) {
   return (
     <div className="shrink-0 border-t border-white/[0.07] px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto max-w-2xl">
-        {card ? <ActiveComposer key={card.key} card={card} onAnswer={onAnswer} /> : <IdleComposer />}
+        {card ? <TypedAnswer key={card.key} card={card} onAnswer={onAnswer} /> : <IdleComposer />}
       </div>
     </div>
   );
@@ -45,7 +45,7 @@ function IdleComposer() {
   );
 }
 
-function ActiveComposer({ card, onAnswer }: { card: OpenCard; onAnswer: (answer: Answer) => void }) {
+export function TypedAnswer({ card, onAnswer }: { card: OpenCard; onAnswer: (answer: Answer) => void }) {
   const { spec, previous } = card;
   const [error, setError] = useState(card.error);
   const [text, setText] = useState(previous?.value != null ? String(previous.value) : "");

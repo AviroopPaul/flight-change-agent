@@ -12,6 +12,7 @@ import {
   Plane,
   Ticket,
   User,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { isPlainObject } from "../../lib/record";
@@ -68,7 +69,14 @@ function Source({ source }: { source?: string }) {
   );
 }
 
-export function RecordCard({ record }: { record: FinalRecord }) {
+interface Props {
+  record: FinalRecord;
+  /** Shows a close button (the floating copy). */
+  onClose?: () => void;
+  className?: string;
+}
+
+export function RecordCard({ record, onClose, className }: Props) {
   const rec: Record<string, unknown> = isPlainObject(record) ? record : {};
   const outcome = String(rec.outcome ?? "");
   const heading = HEADINGS[outcome] ?? FALLBACK;
@@ -77,7 +85,7 @@ export function RecordCard({ record }: { record: FinalRecord }) {
   const footer = engagementLine(rec);
 
   return (
-    <section aria-label="Final record" className={cn("my-2 overflow-hidden rounded-2xl bg-white/[0.03] ring-1", heading.tone)}>
+    <section aria-label="Final record" className={cn("my-2 overflow-hidden rounded-2xl bg-white/[0.03] ring-1", heading.tone, className)}>
       <header className="flex items-start gap-3 border-b border-white/[0.07] px-4 py-3.5">
         <HeadIcon className="mt-0.5 size-6 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -85,6 +93,16 @@ export function RecordCard({ record }: { record: FinalRecord }) {
           <h2 className="text-base font-semibold text-foreground">{heading.title}</h2>
           {typeof rec.outcomeReason === "string" && <p className="mt-0.5 text-[12.5px] text-muted-foreground">{rec.outcomeReason}</p>}
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close final record"
+            className="order-last -mt-1 -mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-white/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="size-4" />
+          </button>
+        )}
         <div className="flex shrink-0 flex-col items-end gap-1">
           <span className="rounded-full bg-current/10 px-2 py-0.5 text-[11px] font-medium ring-1 ring-current/25">{OUTCOME_TEXT[outcome] ?? outcome}</span>
           {rec.revision !== undefined && <span className="font-mono text-[10.5px] text-muted-foreground">rev {String(rec.revision)}</span>}

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { AgentState } from "@livekit/components-react";
 import { Headphones, Loader2, OctagonX, Phone, PhoneOff, Plane } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +27,8 @@ interface Props {
   onPickMic: (deviceId: string) => void;
   onStop: () => void;
   stopDisabled: boolean;
+  /** The button that opens the conversation drawer, placed in the top bar. */
+  conversationButton: ReactNode;
 }
 
 const STATE_TONE: Partial<Record<AgentState, string>> = {
@@ -37,7 +40,7 @@ const STATE_TONE: Partial<Record<AgentState, string>> = {
   failed: "bg-destructive",
 };
 
-export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, onCall, onMute, onPickMic, onStop, stopDisabled }: Props) {
+export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, onCall, onMute, onPickMic, onStop, stopDisabled, conversationButton }: Props) {
   const inCall = isInCall(call.state);
   const live = call.state === CallState.CONNECTED;
   const orbTrack = orb === "speaking" ? voice.agentTrack : orb === "listening" && !voice.muted ? voice.micTrack : undefined;
@@ -50,11 +53,10 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
   return (
     <section
       aria-label="Voice call"
-      className="relative flex shrink-0 flex-col items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 lg:h-full lg:justify-center lg:gap-6 lg:py-10"
+      className="relative flex h-full flex-col items-center px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] lg:px-8 lg:pt-6"
     >
-      {/* Phones: brand and status share one row. Desktop: the brand sits in the corner and the status centers. */}
-      <div className="flex w-full items-center justify-between gap-3 lg:justify-center">
-        <div className="flex min-w-0 items-center gap-2.5 lg:absolute lg:top-6 lg:left-8">
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.06] ring-1 ring-white/10">
             <Plane className="size-4 text-glow" />
           </span>
@@ -63,26 +65,29 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
             <p className="text-[11px] text-muted-foreground">AI voice agent</p>
           </div>
         </div>
-
-        <div
-          role="status"
-          aria-live="polite"
-          className="glass flex min-w-0 items-center gap-2 rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase"
-        >
-          <span className={cn("size-1.5 shrink-0 rounded-full", STATE_TONE[orb] ?? "bg-muted-foreground", inCall && "animate-pulse")} />
-          <span className="truncate">{statusText}</span>
-          {call.connectedAt !== null && (
-            <>
-              <span className="text-white/20">/</span>
-              <CallTimer since={call.connectedAt} />
-            </>
-          )}
-        </div>
+        {conversationButton}
       </div>
 
-      <VoiceOrb state={orb} audioTrack={orbTrack} volume={orbVolume} live={inCall} />
+      <div
+        role="status"
+        aria-live="polite"
+        className="glass mt-3 flex min-w-0 items-center gap-2 rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase lg:mt-0"
+      >
+        <span className={cn("size-1.5 shrink-0 rounded-full", STATE_TONE[orb] ?? "bg-muted-foreground", inCall && "animate-pulse")} />
+        <span className="truncate">{statusText}</span>
+        {call.connectedAt !== null && (
+          <>
+            <span className="text-white/20">/</span>
+            <CallTimer since={call.connectedAt} />
+          </>
+        )}
+      </div>
 
-      <Caption inCall={inCall} connecting={call.state === CallState.CONNECTING} caption={caption} />
+      {/* The orb and caption take the free space; the dock stays at the bottom like a phone call. */}
+      <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 lg:gap-7">
+        <VoiceOrb state={orb} audioTrack={orbTrack} volume={orbVolume} live={inCall} />
+        <Caption inCall={inCall} connecting={call.state === CallState.CONNECTING} caption={caption} />
+      </div>
 
       <div className="glass flex items-center gap-2 rounded-full p-1.5 shadow-[0_20px_60px_-20px_rgb(0_0_0/0.7)]">
         <MicControl inCall={live} muted={voice.muted} level={micLevel} mics={mics} onMute={onMute} onPick={onPickMic} />
@@ -104,7 +109,7 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
         </Tooltip>
       </div>
 
-      <p className="hidden items-center gap-1.5 text-[11px] text-muted-foreground/70 lg:flex">
+      <p className="mt-3 hidden items-center gap-1.5 text-[11px] text-muted-foreground/70 lg:flex">
         <Headphones className="size-3.5" /> Headphones work best. You can talk over the agent at any time.
       </p>
     </section>
@@ -137,7 +142,7 @@ function Caption({ inCall, connecting, caption }: { inCall: boolean; connecting:
   if (!inCall) {
     return (
       <p className="max-w-sm text-center text-sm text-balance text-muted-foreground">
-        Start a call and talk to the agent. It sends the details that are hard to say to the chat.
+        Start a call and talk to the agent. Anything hard to say, it asks for in a card here.
       </p>
     );
   }

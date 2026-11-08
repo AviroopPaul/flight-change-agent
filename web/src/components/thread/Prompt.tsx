@@ -12,6 +12,7 @@ interface Props {
   entry: CardEntry;
   onAnswer: (card: OpenCard, answer: Answer) => void;
   grouped?: boolean;
+  interactive: boolean;
 }
 
 const STATUS_LINE: Record<CardStatus, { text: string; icon: typeof Sparkles }> = {
@@ -22,10 +23,10 @@ const STATUS_LINE: Record<CardStatus, { text: string; icon: typeof Sparkles }> =
 };
 
 /** A question from the agent, in the thread. Its answer controls sit inside it, except typed answers (text bar). */
-export function Prompt({ id, entry, onAnswer, grouped }: Props) {
+export function Prompt({ id, entry, onAnswer, grouped, interactive }: Props) {
   const { spec, status } = entry;
   const open = status === CardStatus.OPEN;
-  const inline = open && !usesTextBar(spec);
+  const inline = interactive && open && !usesTextBar(spec);
   const isFare = spec.kind === InputKind.CONFIRM && fareLines(spec.label) !== null;
   const text = spec.label || spec.field || "Input";
   const card = toOpenCard(id, entry);
@@ -53,14 +54,14 @@ export function Prompt({ id, entry, onAnswer, grouped }: Props) {
           <LineIcon className="size-3" /> {line.text}
         </span>
         {isFare ? (
-          <div id={labelId(spec)}><FareTable label={spec.label} /></div>
+          <div id={interactive ? labelId(spec) : undefined}><FareTable label={spec.label} /></div>
         ) : labelled ? (
-          <span className="block text-[15px] leading-snug font-medium" id={labelId(spec)}>{text}</span>
+          <span className="block text-[15px] leading-snug font-medium" id={interactive ? labelId(spec) : undefined}>{text}</span>
         ) : (
-          <label className="block text-[15px] leading-snug font-medium" id={labelId(spec)} htmlFor={inputId(spec)}>{text}</label>
+          <label className="block text-[15px] leading-snug font-medium" id={interactive ? labelId(spec) : undefined} htmlFor={inputId(spec)}>{text}</label>
         )}
         {spec.help && <p className="mt-1 text-[13px] text-muted-foreground">{spec.help}</p>}
-        {open && usesTextBar(spec) && (
+        {interactive && open && usesTextBar(spec) && (
           <p className="mt-3 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
             <ArrowDown className="size-3.5" /> Type your answer in the box below.
           </p>

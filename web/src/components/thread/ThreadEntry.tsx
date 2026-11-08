@@ -11,6 +11,7 @@ interface Props {
   prev?: ThreadItem;
   cards: Record<string, CardEntry>;
   onAnswer: (card: OpenCard, answer: Answer) => void;
+  interactive: boolean;
 }
 
 /** True when an entry is spoken or written by the agent, so it sits on the agent's side. */
@@ -18,7 +19,7 @@ const agentSide = (item?: ThreadItem): boolean =>
   item?.kind === ThreadItemKind.PROMPT ||
   ((item?.kind === ThreadItemKind.TRANSCRIPT || item?.kind === ThreadItemKind.MESSAGE) && item.role === Role.AGENT);
 
-export function ThreadEntry({ item, prev, cards, onAnswer }: Props) {
+export function ThreadEntry({ item, prev, cards, onAnswer, interactive }: Props) {
   // Consecutive agent entries share one avatar, like one speaker continuing.
   const grouped = agentSide(item) && agentSide(prev);
   switch (item.kind) {
@@ -29,7 +30,7 @@ export function ThreadEntry({ item, prev, cards, onAnswer }: Props) {
     case ThreadItemKind.MESSAGE:
       return <Message role={item.role} text={item.text} time={item.time} grouped={grouped} />;
     case ThreadItemKind.PROMPT:
-      return cards[item.id] ? <Prompt id={item.id} entry={cards[item.id]} onAnswer={onAnswer} grouped={grouped} /> : null;
+      return cards[item.id] ? <Prompt id={item.id} entry={cards[item.id]} onAnswer={onAnswer} grouped={grouped} interactive={interactive} /> : null;
     case ThreadItemKind.ANSWER:
       return (
         <AnswerBubble
