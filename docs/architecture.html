@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Agent Architecture</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --ink: #14181f; --muted: #5d6675; --line: #8a93a3; --soft: #e6e9ee;
+  --voice: #6d4bd8; --voice-bg: #efeafd; --chat: #0f8a6c; --chat-bg: #e3f5ef; --core: #c2410c; --core-bg: #fdeee4;
+  --ext: #2f6fdc; --ext-bg: #e7effc; --store: #a16207; --store-bg: #fbf3dc; --ok: #15803d; --warn: #b45309; --bad: #b91c1c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1116; --panel: #161b22; --ink: #e8ebf0; --muted: #9aa4b2; --line: #6b7584; --soft: #262d37;
+    --voice: #a58cff; --voice-bg: #241d3d; --chat: #3fd1a8; --chat-bg: #0f2b24; --core: #fb8b4e; --core-bg: #33200f;
+    --ext: #78a6ff; --ext-bg: #14223b; --store: #e5b647; --store-bg: #2e2510; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1116; --panel: #161b22; --ink: #e8ebf0; --muted: #9aa4b2; --line: #6b7584; --soft: #262d37;
+  --voice: #a58cff; --voice-bg: #241d3d; --chat: #3fd1a8; --chat-bg: #0f2b24; --core: #fb8b4e; --core-bg: #33200f;
+  --ext: #78a6ff; --ext-bg: #14223b; --store: #e5b647; --store-bg: #2e2510; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 19px; margin: 44px 0 4px; }
+.sub { color: var(--muted); margin: 0 0 18px; }
+.lede { color: var(--muted); margin: 0 0 12px; max-width: 760px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 18px 0 8px; }
+.stat { background: var(--panel); border: 1px solid var(--soft); border-radius: 10px; padding: 12px 14px; }
+.stat b { display: block; font-size: 20px; }
+.stat span { color: var(--muted); font-size: 13px; }
+figure { margin: 10px 0 0; background: var(--panel); border: 1px solid var(--soft); border-radius: 12px; padding: 14px; overflow-x: auto; }
+figure svg { display: block; width: 100%; min-width: 780px; height: auto; }
+figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 10px; }
+.card { background: var(--panel); border: 1px solid var(--soft); border-left: 4px solid var(--core); border-radius: 10px; padding: 12px 14px; }
+.card b { display: block; margin-bottom: 2px; }
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+.card.v { border-left-color: var(--voice); } .card.c { border-left-color: var(--chat); } .card.e { border-left-color: var(--ext); } .card.s { border-left-color: var(--store); }
+code { font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; margin: 8px 0 0; }
+nav a { color: var(--ext); text-decoration: none; }
+/* SVG classes */
+.box { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+.bvoice { fill: var(--voice-bg); stroke: var(--voice); stroke-width: 1.4; }
+.bchat { fill: var(--chat-bg); stroke: var(--chat); stroke-width: 1.4; }
+.bcore { fill: var(--core-bg); stroke: var(--core); stroke-width: 1.4; }
+.bext { fill: var(--ext-bg); stroke: var(--ext); stroke-width: 1.4; }
+.bstore { fill: var(--store-bg); stroke: var(--store); stroke-width: 1.4; }
+.zone { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 5 4; }
+.t { fill: var(--ink); font-size: 14px; font-weight: 600; }
+.s { fill: var(--muted); font-size: 12px; }
+.z { fill: var(--muted); font-size: 11.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.lbl { fill: var(--ink); font-size: 11.5px; }
+.lbl-bg { fill: var(--panel); }
+.ln { fill: none; stroke: var(--line); stroke-width: 1.5; }
+.lv { fill: none; stroke: var(--voice); stroke-width: 1.8; }
+.lc { fill: none; stroke: var(--chat); stroke-width: 1.8; }
+.lk { fill: none; stroke: var(--core); stroke-width: 1.8; }
+.le { fill: none; stroke: var(--ext); stroke-width: 1.6; }
+.dash { stroke-dasharray: 5 4; }
+.lane { stroke: var(--soft); stroke-width: 2; }
+.num { fill: var(--ink); font-size: 11px; font-weight: 700; }
+.numc { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+.ok { fill: var(--ok); } .warn { fill: var(--warn); } .bad { fill: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Flight change agent: architecture</h1>
+  <p class="sub">A voice call and a chat that share one session, and end in one sanitized, versioned record.</p>
+  <div class="stats">
+    <div class="stat"><b>1</b><span>source of truth: a Postgres row per session</span></div>
+    <div class="stat"><b>3 + 5</b><span>fields by voice + fields by chat</span></div>
+    <div class="stat"><b>1.7 s / 7.6 s</b><span>voice latency p50 / p95 (42 turns)</span></div>
+    <div class="stat"><b>~$0.055</b><span>per completed session with a call</span></div>
+  </div>
+  <nav>
+    <a href="#deploy">1. Deployment</a><a href="#shared">2. Shared state</a><a href="#voice">3. A spoken answer</a>
+    <a href="#chat">4. A chat answer during a call</a><a href="#fields">5. Field order</a><a href="#outcomes">6. Outcomes</a>
+    <a href="#record">7. Record delivery</a><a href="#recovery">8. Restarts and drops</a><a href="#decisions">9. Decisions</a>
+  </nav>
+
+  <!-- 1. Deployment -->
+  <h2 id="deploy">1. Where each part runs</h2>
+  <p class="lede">Three hosts. The browser holds no secret: it gets a short-lived LiveKit room token from the backend.</p>
+  <figure>
+  <svg viewBox="0 0 1000 560" role="img" aria-label="Deployment diagram">
+    <defs>
+      <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line)"/></marker>
+      <marker id="av" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"/></marker>
+      <marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--chat)"/></marker>
+      <marker id="ak" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--core)"/></marker>
+      <marker id="ae" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ext)"/></marker>
+    </defs>
+
+    <!-- zones -->
+    <rect class="zone" x="10" y="130" width="240" height="300" rx="12"/><text class="z" x="24" y="152">Vercel · static site</text>
+    <rect class="zone" x="315" y="10" width="670" height="160" rx="12"/><text class="z" x="330" y="32">LiveKit Cloud · ap-south</text>
+    <rect class="zone" x="315" y="210" width="300" height="340" rx="12"/><text class="z" x="330" y="232">Google Cloud · asia-south1</text>
+
+    <!-- browser -->
+    <rect class="box" x="26" y="166" width="208" height="250" rx="10"/>
+    <text class="t" x="40" y="190">Browser (React)</text>
+    <rect class="bvoice" x="40" y="204" width="180" height="78" rx="8"/>
+    <text class="t" x="54" y="228">Voice stage</text><text class="s" x="54" y="246">LiveKit client, Aura orb,</text><text class="s" x="54" y="262">mute, mic picker</text>
+    <rect class="bchat" x="40" y="300" width="180" height="100" rx="8"/>
+    <text class="t" x="54" y="324">Chat panel</text><text class="s" x="54" y="342">one thread: transcript,</text><text class="s" x="54" y="358">input cards, record card</text><text class="s" x="54" y="384">no secrets here</text>
+
+    <!-- livekit -->
+    <rect class="bvoice" x="335" y="46" width="250" height="104" rx="10"/>
+    <text class="t" x="350" y="72">Room (one per session)</text><text class="s" x="350" y="92">WebRTC audio both ways</text><text class="s" x="350" y="110">transcripts, agent state</text><text class="s" x="350" y="128">data topic session-events</text>
+    <rect class="bvoice" x="690" y="46" width="275" height="104" rx="10"/>
+    <text class="t" x="705" y="72">Voice agent (LiveKit Agents, Python)</text><text class="s" x="705" y="92">Silero VAD, turn detector, barge-in</text><text class="s" x="705" y="110">8 tools, all state via the backend</text><text class="s" x="705" y="128">secrets: LiveKit agent secrets</text>
+
+    <!-- backend -->
+    <rect class="bcore" x="335" y="246" width="260" height="170" rx="10"/>
+    <text class="t" x="350" y="272">Backend (FastAPI, Cloud Run)</text>
+    <text class="s" x="350" y="294">engine: pure state machine</text>
+    <text class="s" x="350" y="312">chat WebSocket + event replay</text>
+    <text class="s" x="350" y="330">/internal/* for the agent (bearer)</text>
+    <text class="s" x="350" y="348">record builder + outbox + stub</text>
+    <text class="s" x="350" y="366">rate limits, call caps</text>
+    <text class="s" x="350" y="394">1 instance · secrets in Secret Manager</text>
+    <rect class="bstore" x="335" y="470" width="260" height="64" rx="10"/>
+    <text class="t" x="350" y="496">Neon Postgres</text><text class="s" x="350" y="516">sessions, events, records, transcript</text>
+
+    <!-- providers -->
+    <rect class="bext" x="690" y="236" width="275" height="56" rx="10"/>
+    <text class="t" x="705" y="260">Deepgram</text><text class="s" x="705" y="278">Nova-3 STT · Aura-2 TTS</text>
+    <rect class="bext" x="690" y="306" width="275" height="56" rx="10"/>
+    <text class="t" x="705" y="330">Vertex AI Gemini</text><text class="s" x="705" y="348">3.5 Flash-Lite, fallback 3.1 Flash-Lite</text>
+    <rect class="bext" x="690" y="396" width="275" height="56" rx="10"/>
+    <text class="t" x="705" y="420">Groq (small model)</text><text class="s" x="705" y="438">change reason to a category</text>
+    <rect class="bext" x="690" y="478" width="275" height="56" rx="10"/>
+    <text class="t" x="705" y="502">Cloud Scheduler</text><text class="s" x="705" y="520">POST /internal/sweep every 5 min</text>
+
+    <!-- arrows -->
+    <path class="lv" d="M220 230 L300 230 L300 98 L335 98" marker-end="url(#av)" marker-start="url(#av)"/>
+    <rect class="lbl-bg" x="258" y="160" width="84" height="18" rx="4"/><text class="lbl" x="263" y="173">WebRTC audio</text>
+    <path class="lv" d="M585 98 L690 98" marker-end="url(#av)" marker-start="url(#av)"/>
+    <text class="lbl" x="598" y="90">audio, data</text>
+    <path class="lc" d="M220 350 L335 350" marker-end="url(#ac)" marker-start="url(#ac)"/>
+    <rect class="lbl-bg" x="244" y="356" width="72" height="34" rx="4"/><text class="lbl" x="248" y="369">WS /chat</text><text class="lbl" x="248" y="384">POST /sessions</text>
+    <path class="ln dash" d="M335 266 L220 266" marker-end="url(#a)"/>
+    <rect class="lbl-bg" x="250" y="272" width="64" height="18" rx="4"/><text class="lbl" x="254" y="285">room token</text>
+    <path class="lk" d="M465 246 L465 150" marker-end="url(#ak)"/>
+    <rect class="lbl-bg" x="472" y="186" width="122" height="34" rx="4"/><text class="lbl" x="476" y="199">LiveKit server API:</text><text class="lbl" x="476" y="214">token, dispatch, data</text>
+    <path class="lk" d="M760 150 L760 196 L640 196 L640 300 L595 300" marker-end="url(#ak)"/>
+    <rect class="lbl-bg" x="648" y="200" width="104" height="18" rx="4"/><text class="lbl" x="652" y="213">HTTPS /internal/*</text>
+    <path class="le" d="M965 98 L985 98 L985 264 L965 264" marker-end="url(#ae)"/>
+    <path class="le" d="M985 264 L985 334 L965 334" marker-end="url(#ae)"/>
+    <path class="le" d="M595 400 L660 400 L660 424 L690 424" marker-end="url(#ae)"/>
+    <path class="ln" d="M690 506 L640 506 L640 384 L595 384" marker-end="url(#a)"/>
+    <path class="ln" d="M465 416 L465 470" marker-end="url(#a)" marker-start="url(#a)"/>
+    <text class="lbl" x="474" y="448">one transaction per change</text>
+  </svg>
+  <div class="legend"><span><i style="background:var(--voice)"></i>voice path</span><span><i style="background:var(--chat)"></i>chat path</span><span><i style="background:var(--core)"></i>backend (owns state)</span><span><i style="background:var(--ext)"></i>outside services</span><span><i style="background:var(--store)"></i>storage</span></div>
+  </figure>
+
+  <!-- 2. Shared state -->
+  <h2 id="shared">2. One session, two channels</h2>
+  <p class="lede">Both channels are clients of one engine. Every change goes through <code>apply</code>: lock the row, run a pure command, decide the outcome, write events, commit.</p>
+  <figure>
+  <svg viewBox="0 0 1000 420" role="img" aria-label="Shared state diagram">
+    <defs>
+      <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line)"/></marker>
+      <marker id="bv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--voice)"/></marker>
+      <marker id="bc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--chat)"/></marker>
+    </defs>
+    <rect class="bchat" x="20" y="40" width="200" height="120" rx="10"/>
+    <text class="t" x="36" y="66">Chat panel</text><text class="s" x="36" y="88">inputResponse</text><text class="s" x="36" y="106">optOut (Stop button)</text><text class="s" x="36" y="140">sees: messages, cards</text>
+    <rect class="bvoice" x="780" y="40" width="200" height="120" rx="10"/>
+    <text class="t" x="796" y="66">Voice agent</text><text class="s" x="796" y="88">record_answer, send_chat_</text><text class="s" x="796" y="104">request, switch_to_refund...</text><text class="s" x="796" y="140">sees: notes, tool replies</text>
+
+    <rect class="bcore" x="330" y="30" width="340" height="150" rx="12"/>
+    <text class="t" x="348" y="56">apply(session, command)</text>
+    <text class="s" x="348" y="80">1. SELECT ... FOR UPDATE the session row</text>
+    <text class="s" x="348" y="100">2. engine command: (state, input, now) → result</text>
+    <text class="s" x="348" y="120">3. decide outcome (maybe build a record)</text>
+    <text class="s" x="348" y="140">4. write state + events + outbox, commit</text>
+    <text class="s" x="348" y="164">no I/O inside the engine, no clock reads</text>
+
+    <rect class="bstore" x="330" y="240" width="160" height="110" rx="10"/>
+    <text class="t" x="346" y="266">Session row</text><text class="s" x="346" y="288">fields, open card,</text><text class="s" x="346" y="306">conflicts, quote,</text><text class="s" x="346" y="324">focus, revision</text>
+    <rect class="bstore" x="510" y="240" width="160" height="110" rx="10"/>
+    <text class="t" x="526" y="266">Event log</text><text class="s" x="526" y="288">message, inputRequest,</text><text class="s" x="526" y="306">answer, fieldUpdate,</text><text class="s" x="526" y="324">inputCancel, record</text>
+
+    <path class="lc" d="M220 80 L330 80" marker-end="url(#bc)"/><text class="lbl" x="238" y="72">WS message</text>
+    <path class="lv" d="M780 80 L670 80" marker-end="url(#bv)"/><text class="lbl" x="690" y="72">HTTP tool</text>
+    <path class="ln" d="M410 180 L410 240" marker-end="url(#b)"/>
+    <path class="ln" d="M590 180 L590 240" marker-end="url(#b)"/>
+    <path class="lc" d="M560 350 L560 380 L120 380 L120 160" marker-end="url(#bc)"/>
+    <text class="lbl" x="140" y="300">live push via the chat hub,</text><text class="lbl" x="140" y="316">replay on reload (?after=)</text>
+    <path class="lv" d="M670 300 L880 300 L880 160" marker-end="url(#bv)"/>
+    <rect class="lbl-bg" x="690" y="306" width="180" height="34" rx="4"/><text class="lbl" x="694" y="319">fieldUpdate + open card as a</text><text class="lbl" x="694" y="334">LiveKit data message → note</text>
+    <path class="lv dash" d="M670 140 L740 140 L740 120 L780 120" marker-end="url(#bv)"/><text class="lbl" x="684" y="160">reply text</text>
+  </svg>
+  <figcaption>The agent keeps no state it cannot rebuild. On start it reads <code>/context</code>: field status, open card, focus, last 20 transcript turns, never passenger names.</figcaption>
+  </figure>
+
+  <!-- 3. Voice turn -->
+  <h2 id="voice">3. A spoken answer</h2>
+  <p class="lede">Latency is end of speech → first agent audio: end-of-utterance delay + LLM first token + TTS first byte (p50 0.80 + 0.50 + 0.34 s).</p>
+  <figure><svg id="seqVoice" role="img" aria-label="Sequence: spoken answer"></svg></figure>
+
+  <!-- 4. Chat during call -->
+  <h2 id="chat">4. A chat answer during a call</h2>
+  <p class="lede">The call agent learns about typed answers at once, and asks nothing new while a chat box is open.</p>
+  <figure><svg id="seqChat" role="img" aria-label="Sequence: chat answer during a call"></svg></figure>
+
+  <!-- 5. Fields -->
+  <h2 id="fields">5. What is collected, in order</h2>
+  <p class="lede">One input at a time on both channels. Each card waits until it is answered (the optional email too: type it or tap Skip).</p>
+  <figure>
+  <svg viewBox="0 0 1000 180" role="img" aria-label="Field order">
+    <defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--line)"/></marker></defs>
+    <g id="chips"></g>
+    <rect class="bvoice" x="20" y="150" width="14" height="14" rx="3"/><text class="s" x="42" y="162">by voice (conversational)</text>
+    <rect class="bchat" x="220" y="150" width="14" height="14" rx="3"/><text class="s" x="242" y="162">in chat (letters, digits, choices)</text>
+    <rect class="box" x="460" y="150" width="14" height="14" rx="3" style="stroke-dasharray:3 3"/><text class="s" x="482" y="162">optional</text>
+    <text class="s" x="580" y="162">Refund path: reason, PNR and names only.</text>
+  </svg>
+  </figure>
+
+  <!-- 6. Outcomes -->
+  <h2 id="outcomes">6. How a session ends</h2>
+  <figure>
+  <svg viewBox="0 0 1000 350" role="img" aria-label="Outcome state machine">
+    <defs><marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--line)"/></marker></defs>
+    <rect class="bcore" x="40" y="130" width="190" height="70" rx="35"/>
+    <text class="t" x="135" y="160" text-anchor="middle">Open session</text><text class="s" x="135" y="180" text-anchor="middle">collecting fields</text>
+
+    <rect class="box" x="420" y="20" width="250" height="56" rx="10"/><circle class="ok" cx="440" cy="48" r="6"/>
+    <text class="t" x="456" y="44">completed</text><text class="s" x="456" y="62">all required valid, fare accepted</text>
+    <rect class="box" x="420" y="92" width="250" height="56" rx="10"/><circle class="warn" cx="440" cy="120" r="6"/>
+    <text class="t" x="456" y="116">needsReview</text><text class="s" x="456" y="134">refund, or idle with a conflict</text>
+    <rect class="box" x="420" y="164" width="250" height="56" rx="10"/><circle class="bad" cx="440" cy="192" r="6"/>
+    <text class="t" x="456" y="188">optedOut</text><text class="s" x="456" y="206">user confirmed stop</text>
+    <rect class="box" x="420" y="250" width="250" height="56" rx="10" style="stroke-dasharray:5 4"/><circle cx="440" cy="278" r="6" fill="var(--muted)"/>
+    <text class="t" x="456" y="274">partial</text><text class="s" x="456" y="292">30 min idle, no call, fields missing</text>
+
+    <rect class="bstore" x="760" y="75" width="210" height="90" rx="10"/>
+    <text class="t" x="776" y="103">Locked</text><text class="s" x="776" y="123">record shown in chat,</text><text class="s" x="776" y="141">no more input</text>
+
+    <path class="ln" d="M230 150 L330 150 L330 48 L420 48" marker-end="url(#o)"/>
+    <path class="ln" d="M330 120 L420 120" marker-end="url(#o)"/>
+    <path class="ln" d="M330 150 L330 192 L420 192" marker-end="url(#o)"/>
+    <path class="ln dash" d="M230 180 L300 180 L300 278 L420 278" marker-end="url(#o)"/>
+    <path class="ln" d="M670 48 L715 48 L715 192 L670 192"/>
+    <path class="ln" d="M670 120 L760 120" marker-end="url(#o)"/>
+    <path class="ln dash" d="M545 306 L545 334 L135 334 L135 200" marker-end="url(#o)"/>
+    <text class="lbl" x="150" y="326">user comes back → reopens → revision N+1</text>
+    <text class="s" x="760" y="210">Precedence when two apply:</text><text class="s" x="760" y="228">optedOut &gt; needsReview &gt;</text><text class="s" x="760" y="246">completed &gt; partial</text>
+  </svg>
+  </figure>
+
+  <!-- 7. Record -->
+  <h2 id="record">7. Record delivery, exactly once</h2>
+  <figure>
+  <svg viewBox="0 0 1000 250" role="img" aria-label="Record delivery">
+    <defs><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--line)"/></marker></defs>
+    <rect class="bcore" x="20" y="60" width="180" height="90" rx="10"/><text class="t" x="36" y="88">End state reached</text><text class="s" x="36" y="108">inside apply's</text><text class="s" x="36" y="126">transaction</text>
+    <rect class="bstore" x="260" y="60" width="200" height="90" rx="10"/><text class="t" x="276" y="88">Outbox row</text><text class="s" x="276" y="108">key (sessionId, revision)</text><text class="s" x="276" y="126">committed with the state</text>
+    <rect class="box" x="520" y="60" width="200" height="90" rx="10"/><text class="t" x="536" y="88">Deliver</text><text class="s" x="536" y="108">POST /stub/records</text><text class="s" x="536" y="126">Idempotency-Key header</text>
+    <rect class="bext" x="780" y="60" width="200" height="90" rx="10"/><text class="t" x="796" y="88">Stub endpoint</text><text class="s" x="796" y="108">ignores a repeated key</text><text class="s" x="796" y="126">GET ?sessionId= to read</text>
+    <path class="ln" d="M200 105 L260 105" marker-end="url(#r)"/><path class="ln" d="M460 105 L520 105" marker-end="url(#r)"/><path class="ln" d="M720 105 L780 105" marker-end="url(#r)"/>
+    <text class="s" x="520" y="186">Delivery runs:</text>
+    <rect class="box" x="520" y="196" width="104" height="30" rx="15"/><text class="lbl" x="534" y="215">right after</text>
+    <rect class="box" x="632" y="196" width="128" height="30" rx="15"/><text class="lbl" x="646" y="215">every sweep (5 min)</text>
+    <rect class="box" x="768" y="196" width="104" height="30" rx="15"/><text class="lbl" x="784" y="215">on startup</text>
+    <text class="s" x="20" y="186">Also: one JSON log line, and the record card in the chat.</text>
+    <text class="s" x="20" y="206">Schema: docs/record.schema.json</text>
+  </svg>
+  </figure>
+
+  <!-- 8. Recovery -->
+  <h2 id="recovery">8. Restarts and drops</h2>
+  <figure>
+  <svg viewBox="0 0 1000 270" role="img" aria-label="Recovery cases">
+    <g id="recov"></g>
+  </svg>
+  </figure>
+
+  <!-- 9. Decisions -->
+  <h2 id="decisions">9. Key decisions</h2>
+  <div class="cards">
+    <div class="card"><b>Backend owns all state</b><p>The agent and the page are thin clients. One Postgres row per session, changed only by the engine.</p></div>
+    <div class="card"><b>Pure engine</b><p>Commands are pure functions of (state, input, now), so outcome rules are unit tested without I/O.</p></div>
+    <div class="card s"><b>Event log as the chat</b><p>The chat is a replay of events with ids, so a reload or reconnect shows the same thread with no duplicates.</p></div>
+    <div class="card c"><b>Typed wins for letters and digits</b><p>STT mangles PNRs and names. Spoken values are hints; the chat value wins and the conflict is logged.</p></div>
+    <div class="card c"><b>One input at a time</b><p>One open card. The call agent waits for it and asks no new spoken question until it is submitted.</p></div>
+    <div class="card v"><b>LiveKit for voice</b><p>WebRTC, barge-in, turn detection and reconnects come built in. The agent is hosted on LiveKit Cloud.</p></div>
+    <div class="card e"><b>Gemini Flash-Lite on Vertex</b><p>Cheapest model with fast tool calls (~0.5 s first token). Service-account key with only the Vertex AI User role.</p></div>
+    <div class="card s"><b>Outbox for exactly once</b><p>Record and state commit together. Delivery retries with an idempotency key, so a restart never sends twice.</p></div>
+    <div class="card"><b>The agent never books</b><p>It collects, validates, quotes and gets consent. A downstream service would execute the change.</p></div>
+  </div>
+</main>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, text) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text !== undefined) n.textContent = text;
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const COLOR = { v: "var(--voice)", c: "var(--chat)", k: "var(--core)", e: "var(--ext)", n: "var(--line)" };
+const BOX = { v: "bvoice", c: "bchat", k: "bcore", e: "bext", s: "bstore", n: "box" };
+
+function sequence(id, lanes, steps) {
+  const svg = document.getElementById(id);
+  const W = 1000, top = 70, gap = 44, H = top + steps.length * gap + 30;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const defs = el("defs", {}, svg);
+  for (const c in COLOR) {
+    const m = el("marker", { id: `${id}-${c}`, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto" }, defs);
+    el("path", { d: "M0,0 L10,5 L0,10 z", fill: COLOR[c] }, m);
+  }
+  const x = (i) => 70 + i * ((W - 140) / (lanes.length - 1));
+  lanes.forEach((l, i) => {
+    el("line", { class: "lane", x1: x(i), y1: 50, x2: x(i), y2: H - 10 }, svg);
+    el("rect", { class: BOX[l.c], x: x(i) - 62, y: 10, width: 124, height: 40, rx: 8 }, svg);
+    el("text", { class: "t", x: x(i), y: 35, "text-anchor": "middle", style: "font-size:13px" }, svg, l.name);
+  });
+  steps.forEach((s, k) => {
+    const y = top + k * gap + 14;
+    const a = x(s.from), b = x(s.to);
+    const color = s.c || "n";
+    if (s.from === s.to) {
+      const left = s.from >= lanes.length / 2, d = left ? -34 : 34;
+      el("path", { d: `M${a} ${y - 8} h${d} v16 h${-d}`, fill: "none", stroke: COLOR[color], "stroke-width": 1.6, "marker-end": `url(#${id}-${color})` }, svg);
+      el("text", { class: "lbl", x: a + (left ? -42 : 42), y: y + 4, "text-anchor": left ? "end" : "start" }, svg, s.label);
+    } else {
+      el("line", { x1: a, y1: y, x2: b + (b > a ? -3 : 3), y2: y, stroke: COLOR[color], "stroke-width": 1.7, "stroke-dasharray": s.dash ? "5 4" : "", "marker-end": `url(#${id}-${color})` }, svg);
+      const mid = (a + b) / 2;
+      const t = el("text", { class: "lbl", x: mid, y: y - 6, "text-anchor": "middle" }, svg, s.label);
+      void t;
+    }
+    el("circle", { class: "numc", cx: 22, cy: y, r: 10 }, svg);
+    el("text", { class: "num", x: 22, y: y + 4, "text-anchor": "middle" }, svg, String(k + 1));
+  });
+}
+
+sequence("seqVoice",
+  [{ name: "Caller", c: "n" }, { name: "LiveKit room", c: "v" }, { name: "Voice agent", c: "v" },
+   { name: "Deepgram", c: "e" }, { name: "Gemini", c: "e" }, { name: "Backend", c: "k" }],
+  [
+    { from: 0, to: 1, label: "speech (WebRTC)", c: "v" },
+    { from: 1, to: 2, label: "audio track", c: "v" },
+    { from: 2, to: 3, label: "stream audio → transcript", c: "e" },
+    { from: 2, to: 2, label: "turn detector: end of turn" },
+    { from: 2, to: 4, label: "prompt + context + tools", c: "e" },
+    { from: 4, to: 2, label: "tool call record_answer(newTravelDate, 2026-12-20)", c: "e", dash: true },
+    { from: 2, to: 5, label: "POST /internal/sessions/{id}/fields", c: "k" },
+    { from: 5, to: 5, label: "apply: validate, normalize, save, next card" },
+    { from: 5, to: 2, label: "tool result: \"Saved Sunday 20 December 2026. Read it back.\"", c: "k", dash: true },
+    { from: 2, to: 4, label: "tool result", c: "e" },
+    { from: 4, to: 2, label: "reply text, streamed", c: "e", dash: true },
+    { from: 2, to: 3, label: "text → speech (Aura-2)", c: "e" },
+    { from: 2, to: 0, label: "agent audio + live transcript (barge-in stops it at once)", c: "v" },
+    { from: 2, to: 5, label: "transcript line, usage, latency metrics", c: "n", dash: true },
+  ]);
+
+sequence("seqChat",
+  [{ name: "Caller", c: "n" }, { name: "Chat panel", c: "c" }, { name: "Backend", c: "k" },
+   { name: "Postgres", c: "s" }, { name: "LiveKit room", c: "v" }, { name: "Voice agent", c: "v" }],
+  [
+    { from: 0, to: 1, label: "types PQR456 in the open card", c: "c" },
+    { from: 1, to: 2, label: "inputResponse (WebSocket)", c: "c" },
+    { from: 2, to: 3, label: "apply: lock row, engine, commit", c: "k" },
+    { from: 2, to: 1, label: "inputRequest: Passenger 1 of 2", c: "c", dash: true },
+    { from: 2, to: 4, label: "data: fieldUpdate + openCard", c: "k" },
+    { from: 4, to: 5, label: "session-events", c: "v" },
+    { from: 5, to: 5, label: "note in context; reply if nobody is speaking" },
+    { from: 5, to: 0, label: "\"Got it. Now type the passenger names in the chat.\"", c: "v" },
+    { from: 5, to: 5, label: "waits: no new spoken question until the box is answered" },
+  ]);
+
+(function chips() {
+  const g = document.getElementById("chips");
+  const fields = [
+    ["Reason", "v", "changeReason"], ["PNR", "c", "pnr"], ["Names", "c", "passengerNames"], ["Date", "v", "newTravelDate"],
+    ["Time of day", "v", "timeFlexibility"], ["Email", "c", "contactEmail", true], ["Flight", "c", "selectedFlight"], ["Fare OK", "c", "fareAcceptance"],
+  ];
+  const w = 104, gap = 18, x0 = 20;
+  fields.forEach(([name, c, key, opt], i) => {
+    const x = x0 + i * (w + gap);
+    const r = el("rect", { class: BOX[c], x, y: 40, width: w, height: 64, rx: 10 }, g);
+    if (opt) r.setAttribute("style", "stroke-dasharray:5 4");
+    el("text", { class: "t", x: x + w / 2, y: 68, "text-anchor": "middle" }, g, name);
+    el("text", { class: "s", x: x + w / 2, y: 88, "text-anchor": "middle", style: "font-size:10px" }, g, key);
+    el("text", { class: "num", x: x + w / 2, y: 30, "text-anchor": "middle" }, g, String(i + 1));
+    if (i < fields.length - 1) el("path", { class: "ln", d: `M${x + w + 2} 72 L${x + w + gap - 2} 72`, "marker-end": "url(#f)" }, g);
+  });
+})();
+
+(function recovery() {
+  const g = document.getElementById("recov");
+  const rows = [
+    ["Backend restart", "k", "State and events are in Postgres. The chat socket reconnects and replays. Undelivered records go out on startup."],
+    ["Page reload", "c", "Full replay: chat events plus the spoken call lines, in time order. The open card comes back as it was."],
+    ["Call drop / tab closed", "v", "The room stays 2 minutes; rejoin and the same agent continues."],
+    ["Agent restart", "v", "New agent reads /context and says “Sorry, we got cut off”, then asks for the current step."],
+    ["Call me back", "c", "After a clean hang-up, a new call opens with “Welcome back” and continues at the current step."],
+  ];
+  rows.forEach(([name, c, text], i) => {
+    const y = 10 + i * 52;
+    el("rect", { class: BOX[c], x: 20, y, width: 200, height: 42, rx: 21 }, g);
+    el("text", { class: "t", x: 120, y: y + 26, "text-anchor": "middle", style: "font-size:13px" }, g, name);
+    el("path", { class: "ln", d: `M220 ${y + 21} L250 ${y + 21}` }, g);
+    el("text", { class: "s", x: 260, y: y + 26, style: "font-size:13px" }, g, text);
+  });
+})();
+</script>
+</body>
+</html>

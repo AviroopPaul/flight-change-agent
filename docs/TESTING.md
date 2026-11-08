@@ -151,9 +151,19 @@ From one network, open 11 new sessions within an hour.
 
 ### 19. New chat
 
-Answer the booking-reference box, then tap the **pencil icon** in the header.
+Answer the booking-reference box, then tap **New chat** in the top bar (beside Debug and Conversation).
 **Expect:** a new session id in the URL and an empty thread with the welcome message. Open the old URL (with the old `sessionId`): your earlier answers are still there.
-During a call, tap the pencil icon. **Expect:** a box asks "End the call and start a new chat?". Cancel keeps the call.
+During a call, tap New chat. **Expect:** a box asks "End the call and start a new chat?". Cancel keeps the call.
+
+### 20. Call me back
+
+Start a call, give the reason, then end the call. Wait about 2 minutes.
+**Expect:** the call button reads **Call me back**, and the Conversation pane ends with a "Call me back" prompt. Tap it. **Expect:** the agent opens with "Welcome back" and asks for the step you were on (for example the booking reference). It does not repeat the reason.
+
+### 21. Debug view
+
+In any session, tap **Debug** in the top bar.
+**Expect:** a full-screen session timeline with stats (outcome, calls, chat answers, latency, tool calls, cost), the field status, and a list of every event: spoken lines, chat cards and answers, agent tool calls with their arguments and replies, state changes, turn latency and records. The lane chips hide or show each kind. Esc closes it.
 
 ## What to send back for a failure
 

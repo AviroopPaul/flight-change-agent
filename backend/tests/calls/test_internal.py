@@ -127,3 +127,11 @@ async def test_spoken_reason_gets_category(client, lk, sid, app):
     assert r.json()["ok"] is True
     ctx = (await client.get(url(sid, "/context"), headers=AUTH)).json()
     assert ctx["state"]["reasonCategory"] == "schedule"
+
+
+async def test_context_says_if_a_call_was_still_active(client, lk, sid):
+    ctx = (await client.get(url(sid, "/context"), headers=AUTH)).json()
+    assert ctx["callActive"] is False
+    await client.post(url(sid, "/call"), json={"active": True}, headers=AUTH)
+    ctx = (await client.get(url(sid, "/context"), headers=AUTH)).json()
+    assert ctx["callActive"] is True

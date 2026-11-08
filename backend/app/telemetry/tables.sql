@@ -25,3 +25,14 @@ CREATE TABLE IF NOT EXISTS turn_metrics (
     total_ms numeric,
     at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS tool_calls (
+    id bigserial PRIMARY KEY,
+    session_id text NOT NULL,
+    name text NOT NULL,
+    args jsonb NOT NULL,
+    ok boolean NOT NULL,
+    result text NOT NULL,
+    at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS tool_calls_session ON tool_calls (session_id, id);

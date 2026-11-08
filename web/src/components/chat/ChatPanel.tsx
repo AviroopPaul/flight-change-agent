@@ -1,25 +1,26 @@
+import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import type { Answer, CardEntry, OpenCard, ThreadItem } from "../../state/conversation";
 import { Thread } from "../thread/Thread";
-import { NewChatButton } from "./NewChatButton";
 
 interface Props {
   serverLabel: string;
   sessionId: string | null;
-  inCall: boolean;
   open: boolean;
   onClose: () => void;
   items: ThreadItem[];
   cards: Record<string, CardEntry>;
   barCard: OpenCard | null;
   onAnswer: (card: OpenCard, answer: Answer) => void;
+  /** Shown after the last entry, e.g. the Call me back action. */
+  footer?: ReactNode;
 }
 
 /**
  * The full conversation: transcript, agent cards and the typing bar. It is a drawer, closed by default;
  * the page is voice first and the floating cards collect input while it is closed.
  */
-export function ChatPanel({ serverLabel, sessionId, inCall, open, onClose, items, cards, barCard, onAnswer }: Props) {
+export function ChatPanel({ serverLabel, sessionId, open, onClose, items, cards, barCard, onAnswer, footer }: Props) {
   return (
     <aside
       id="conversation"
@@ -36,7 +37,6 @@ export function ChatPanel({ serverLabel, sessionId, inCall, open, onClose, items
               session {sessionId ?? "starting…"}
             </p>
           </div>
-          <NewChatButton inCall={inCall} />
           <button
             type="button"
             onClick={onClose}
@@ -46,7 +46,7 @@ export function ChatPanel({ serverLabel, sessionId, inCall, open, onClose, items
             <X className="size-4" />
           </button>
         </header>
-        <Thread items={items} cards={cards} barCard={barCard} onAnswer={onAnswer} interactive={open} />
+        <Thread items={items} cards={cards} barCard={barCard} onAnswer={onAnswer} interactive={open} footer={footer} />
       </section>
     </aside>
   );

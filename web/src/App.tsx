@@ -3,8 +3,12 @@ import { useTrackVolume } from "@livekit/components-react";
 import { TriangleAlert } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import * as config from "./config";
+import { CallBackPrompt } from "./components/chat/CallBackPrompt";
 import { ChatPanel } from "./components/chat/ChatPanel";
 import { ConversationButton } from "./components/chat/ConversationButton";
+import { NewChatButton } from "./components/chat/NewChatButton";
+import { DebugButton } from "./components/debug/DebugButton";
+import { DebugPanel } from "./components/debug/DebugPanel";
 import { FloatingCards } from "./components/float/FloatingCards";
 import { Stage } from "./components/stage/Stage";
 import { createDemo } from "./demo/demo";
@@ -41,6 +45,10 @@ export function App() {
   const sendInput = demo?.sendInput ?? chat.sendInput;
   const inCall = isInCall(state.call.state);
   const onCall = () => (inCall ? controls.hangUp() : controls.start());
+  // Call me back: a call happened (its lines are in the thread, also after a reload) and the request is still open.
+  const hadCall = state.items.some((item) => item.kind === ThreadItemKind.TRANSCRIPT);
+  const callBack = hadCall && !inCall && !record && Boolean(session.sessionId) && !demo;
+  const [debugOpen, setDebugOpen] = useState(false);
   const onAnswer = (open: OpenCard, answer: Answer) => submit(open.spec, answer, sendInput);
 
   // The demo has no LiveKit room, so its mute is a local flag that just silences the meters.
@@ -95,7 +103,18 @@ export function App() {
           onPickMic={pickMic}
           onStop={chat.optOut}
           stopDisabled={!session.sessionId || Boolean(record) || Boolean(demo)}
-          conversationButton={<ConversationButton open={paneOpen} unread={unread} onToggle={() => setPaneOpen((o) => !o)} />}
+          callBack={callBack}
+          actions={
+            <>
+              <NewChatButton inCall={inCall} />
+              <DebugButton
+                open={debugOpen}
+                disabled={!session.sessionId || !config.backend || Boolean(demo)}
+                onToggle={() => setDebugOpen((o) => !o)}
+              />
+              <ConversationButton open={paneOpen} unread={unread} onToggle={() => setPaneOpen((o) => !o)} />
+            </>
+          }
         />
 
         {notice && (
@@ -121,13 +140,20 @@ export function App() {
         <ChatPanel
           serverLabel={config.serverLabel}
           sessionId={session.sessionId}
-          inCall={inCall}
           open={paneOpen}
           onClose={() => setPaneOpen(false)}
           items={state.items}
           cards={state.cards}
           barCard={barCard}
           onAnswer={onAnswer}
+          footer={callBack ? <CallBackPrompt onCall={() => controls.start()} /> : null}
+        />
+
+        <DebugPanel
+          open={debugOpen}
+          onClose={() => setDebugOpen(false)}
+          http={config.backend?.http ?? null}
+          sessionId={session.sessionId}
         />
       </div>
     </TooltipProvider>

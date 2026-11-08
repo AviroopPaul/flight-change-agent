@@ -23,6 +23,23 @@ async def all_turns(conn, session_id: str) -> list[tuple[int, str, str, object]]
     return [(r["id"], r["role"], r["text"], r["at"]) for r in rows]
 
 
+async def add_tool_call(conn, session_id: str, name: str, args: dict, ok: bool, result: str) -> None:
+    await conn.execute("insert into tool_calls (session_id, name, args, ok, result) values ($1, $2, $3, $4, $5)",
+                       session_id, name, args, ok, result)
+
+
+async def tool_calls(conn, session_id: str) -> list[dict]:
+    rows = await conn.fetch("select name, args, ok, result, at from tool_calls where session_id = $1 order by id",
+                            session_id)
+    return [dict(r) for r in rows]
+
+
+async def turn_metrics(conn, session_id: str) -> list[dict]:
+    rows = await conn.fetch("select eou_ms, llm_ttft_ms, tts_ttfb_ms, total_ms, at from turn_metrics"
+                            " where session_id = $1 order by id", session_id)
+    return [{k: (float(v) if k != "at" and v is not None else v) for k, v in dict(r).items()} for r in rows]
+
+
 async def add_usage(conn, session_id: str, kind: str, quantity: float) -> None:
     await conn.execute("insert into usage (session_id, kind, quantity) values ($1, $2, $3)",
                        session_id, kind, quantity)
