@@ -11,7 +11,10 @@
 
 ## Running it
 
-This folder is a small React + TypeScript page (Vite): a messaging-app style chat with the call button in its header and one conversation thread with the live call transcript and the agent's input cards (one at a time); each submitted input becomes a chat bubble. There is no backend; build yours with any stack. Using the starter is optional: edit it, or replace it with anything else.
+This folder is a React + TypeScript page (Vite, Tailwind v4, shadcn/ui). It has two parts:
+
+- **Voice stage:** a glowing orb (LiveKit's Agents UI Aura shader) that reacts to the agent's state and to the voice of whoever is talking, a live caption, and a control dock with mute, a microphone picker, start or end call, and stop request.
+- **Chat panel:** one conversation thread with the live call transcript and the agent's input cards (one at a time), and a typing bar for typed answers. Each submitted input becomes a chat bubble. There is no backend; build yours with any stack. Using the starter is optional: edit it, or replace it with anything else.
 
 Needs Node 20.19+ or 22.12+:
 
@@ -38,15 +41,18 @@ src/
   config.ts                 VITE_SERVER_URL, ?sessionId / ?demo / ?pace
   App.tsx                   picks demo or backend and wires it to the page
   state/                    page state, no React: reducer, actions, the `Ui` interface, mic level store
-  hooks/useCall.ts          call socket: mic frames up; audio, stopPlayback, transcript down
+  hooks/useCall.ts          LiveKit call: token, mic, agent audio, transcript, agent state, mute, mic switching
+  hooks/useMicDevices.ts    microphone list, saved choice, plug and unplug events
   hooks/useChat.ts          chat socket (reconnects), uploads, inputResponse
   hooks/useConversation.ts  wraps the reducer in the `Ui` object the transports call
   transport/                socket helpers, incoming message handlers, file upload (no React)
   audio/                    mic capture (PCM16 mono 16 kHz, 20 ms frames) + gapless playback, no networking
-  components/               header/, thread/, cards/ (Composer, ChoiceCard), record/
+  components/               stage/ (orb, mic control), chat/, thread/, cards/ (Composer, InlineCard), record/
+  components/ui/            shadcn/ui primitives (button, dropdown menu, tooltip)
+  components/agents-ui/     LiveKit Agents UI Aura orb (shadcn registry, Polyform Non-Resale license)
   lib/                      pure helpers: formatting, answer validation, input ids, record display
   demo/                     the ?demo=1 script only
-  style.css
+  index.css                 Tailwind entry, dark theme tokens, orb and backdrop styles
 ```
 
 `useCall` and `useChat` are the seam to your backend: they turn socket messages into calls on the `Ui` object in `src/state/ui.ts` (`addTranscript`, `addMessage`, `showInputCard`, `rejectInputCard`, `cancelInputCard`, `showRecord`, ...), and the demo drives the same object.

@@ -4,7 +4,17 @@ import { fareLines, optionParts } from "../../lib/cardView";
 import { INPUT_TYPES, inputId, labelId } from "../../lib/inputs";
 import { InputKind } from "../../protocol";
 import type { Answer, OpenCard } from "../../state/conversation";
+import { cn } from "@/lib/utils";
 import { ErrorLine } from "./ErrorLine";
+
+const OPTION =
+  "group flex w-full items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-3.5 py-3 text-left ring-1 ring-white/10 transition-all outline-none hover:bg-white/[0.06] hover:ring-white/25 focus-visible:ring-2 focus-visible:ring-ring";
+const FIELD =
+  "h-10 min-w-0 flex-1 rounded-xl bg-white/[0.04] px-3 text-[15px] ring-1 ring-white/12 outline-none placeholder:text-muted-foreground focus:ring-white/35 [color-scheme:dark]";
+const ACT =
+  "inline-flex min-h-10 flex-1 items-center justify-center rounded-xl px-4 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40";
+const PRIMARY = cn(ACT, "bg-primary text-primary-foreground hover:brightness-110");
+const SECONDARY = cn(ACT, "bg-white/[0.05] text-foreground ring-1 ring-white/12 hover:bg-white/10");
 
 interface Props {
   card: OpenCard;
@@ -32,23 +42,23 @@ export function FareTable({ label }: { label: string }) {
   const fare = fareLines(label);
   if (!fare) return null;
   return (
-    <div className="fare">
+    <div className="flex flex-col text-sm">
       {fare.lines.filter((line) => !line.total).map((line) => (
-        <div key={line.label} className="fare-row">
+        <div key={line.label} className="flex justify-between gap-3 py-0.5 text-muted-foreground">
           <span>{line.label}</span>
-          <span>{line.amount}</span>
+          <span className="text-foreground tabular-nums">{line.amount}</span>
         </div>
       ))}
       {fare.other.map((text) => (
-        <p key={text} className="fare-note">{text}</p>
+        <p key={text} className="mt-0.5 text-[13px] text-muted-foreground">{text}</p>
       ))}
       {fare.lines.filter((line) => line.total).map((line) => (
-        <div key={line.label} className="fare-row total">
+        <div key={line.label} className="mt-2 flex justify-between gap-3 border-t border-white/10 pt-2 text-[15px] font-semibold">
           <span>{line.label}</span>
-          <span>{line.amount}</span>
+          <span className="text-glow tabular-nums">{line.amount}</span>
         </div>
       ))}
-      {fare.question && <p className="fare-question">{fare.question}</p>}
+      {fare.question && <p className="mt-3 font-medium">{fare.question}</p>}
     </div>
   );
 }
@@ -56,12 +66,12 @@ export function FareTable({ label }: { label: string }) {
 function ConfirmControls({ card, onAnswer }: Props) {
   return (
     <>
-      <div className="actions" role="group" aria-labelledby={labelId(card.spec)}>
+      <div className="mt-4 flex gap-2" role="group" aria-labelledby={labelId(card.spec)}>
         {singleChoices(card.spec).map((choice) => (
           <button
             key={choice.label}
             type="button"
-            className={`act${choice.value === true ? " primary" : ""}`}
+            className={choice.value === true ? PRIMARY : SECONDARY}
             onClick={() => onAnswer(choiceAnswer(choice))}
           >
             {choice.label}
@@ -77,25 +87,25 @@ function SelectControls({ card, onAnswer }: Props) {
   const choices = singleChoices(card.spec);
   return (
     <>
-      <div className="options" role="group" aria-labelledby={labelId(card.spec)}>
+      <div className="mt-3 flex flex-col gap-2" role="group" aria-labelledby={labelId(card.spec)}>
         {choices.map((choice, i) => {
           if (choice.value === null) return null;
           const parts = optionParts(choice.label);
           return (
-            <button key={`${i}:${choice.label}`} type="button" className="option" onClick={() => onAnswer(choiceAnswer(choice))}>
+            <button key={`${i}:${choice.label}`} type="button" className={OPTION} onClick={() => onAnswer(choiceAnswer(choice))}>
               {parts ? (
                 <>
-                  <span className="opt-main">
-                    <span className="opt-title">{parts.title}</span>
-                    <span className="opt-sub">{parts.subtitle}</span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-[15px] font-medium">{parts.title}</span>
+                    <span className="text-xs text-muted-foreground">{parts.subtitle}</span>
                   </span>
-                  <span className="opt-side">
-                    <span className="opt-price">{parts.price}</span>
-                    {parts.note && <span className="opt-note">{parts.note}</span>}
+                  <span className="flex shrink-0 flex-col items-end text-right">
+                    <span className="text-xs text-muted-foreground tabular-nums">{parts.price}</span>
+                    {parts.note && <span className="text-[13px] font-semibold text-success">{parts.note}</span>}
                   </span>
                 </>
               ) : (
-                <span className="opt-title">{choice.label}</span>
+                <span className="text-[15px] font-medium">{choice.label}</span>
               )}
             </button>
           );
@@ -120,17 +130,17 @@ function MultiSelectControls({ card, onAnswer }: Props) {
     else onAnswer(result);
   };
   return (
-    <form className="inline-form" noValidate onSubmit={onSubmit} onChange={() => setError(null)}>
-      <div className="options" role="group" aria-labelledby={labelId(spec)}>
+    <form className="mt-3 flex flex-col gap-2" noValidate onSubmit={onSubmit} onChange={() => setError(null)}>
+      <div className="flex flex-col gap-2" role="group" aria-labelledby={labelId(spec)}>
         {(spec.options ?? []).map(({ value, label }) => (
-          <label key={value} className="option check">
-            <input type="checkbox" checked={checked.includes(value)} onChange={(e) => toggle(value, e.target.checked)} />
-            <span className="opt-title">{label || value}</span>
+          <label key={value} className={cn(OPTION, "cursor-pointer justify-start has-[:checked]:bg-white/[0.07] has-[:checked]:ring-white/30")}>
+            <input type="checkbox" checked={checked.includes(value)} onChange={(e) => toggle(value, e.target.checked)} className="size-4 accent-[var(--glow)]" />
+            <span className="text-[15px] font-medium">{label || value}</span>
           </label>
         ))}
       </div>
-      <div className="actions">
-        <button type="submit" className="act primary">Send</button>
+      <div className="flex">
+        <button type="submit" className={PRIMARY}>Send</button>
       </div>
       <ErrorLine message={error} />
     </form>
@@ -147,11 +157,11 @@ function DateControls({ card, onAnswer }: Props) {
     onAnswer({ value, display: longDate(value) });
   };
   return (
-    <form className="inline-form" noValidate onSubmit={onSubmit}>
-      <div className="row">
+    <form className="mt-3 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
+      <div className="flex items-center gap-2">
         <input
           id={inputId(spec)}
-          className="field"
+          className={FIELD}
           type="date"
           min={today()}
           value={value}
@@ -160,7 +170,7 @@ function DateControls({ card, onAnswer }: Props) {
             setError(null);
           }}
         />
-        <button type="submit" className="act primary" disabled={!value}>Use date</button>
+        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!value}>Use date</button>
       </div>
       <ErrorLine message={error} />
     </form>
@@ -179,12 +189,12 @@ function OptionalTextControls({ card, onAnswer }: Props) {
     else onAnswer(result);
   };
   return (
-    <form className="inline-form" noValidate onSubmit={onSubmit}>
-      <div className="row">
+    <form className="mt-3 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
+      <div className="flex items-center gap-2">
         <input
           ref={inputRef}
           id={inputId(spec)}
-          className="field"
+          className={FIELD}
           type={INPUT_TYPES[spec.kind] ?? "text"}
           placeholder={spec.placeholder || "Type here"}
           value={text}
@@ -193,7 +203,7 @@ function OptionalTextControls({ card, onAnswer }: Props) {
             setError(null);
           }}
         />
-        <button type="submit" className="act primary" disabled={!text.trim()}>Save</button>
+        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!text.trim()}>Save</button>
       </div>
       <SkipLink card={card} onAnswer={onAnswer} />
       <ErrorLine message={error} />
@@ -204,7 +214,7 @@ function OptionalTextControls({ card, onAnswer }: Props) {
 function SkipLink({ card, onAnswer }: Props) {
   if (card.spec.required !== false) return null;
   return (
-    <button type="button" className="skip" onClick={() => onAnswer({ value: null, display: SKIPPED_DISPLAY })}>
+    <button type="button" className="mt-2 self-start text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => onAnswer({ value: null, display: SKIPPED_DISPLAY })}>
       Skip
     </button>
   );

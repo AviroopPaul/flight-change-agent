@@ -25,7 +25,7 @@ Items marked **[call]** are my decisions, not the user's. The user can change th
 - Real booking, payment or ticketing.
 - Round trips, multi-segment bookings, or changing only some passengers on a booking.
 - File uploads. There is no file field in the core flow, so no upload storage is needed.
-- Login, visual polish.
+- Login.
 - The other bonuses (see section 14). We revisit them after the core works.
 
 **Anti-goals (a failure even if it "works")**
@@ -286,7 +286,8 @@ A conflict is two different values for one field, one from the call and one from
   - Publish the mic and play the agent's audio.
   - Render transcription streams into the thread with the existing `addTranscript`.
   - The `audio/` capture and playback code is no longer used for the call.
-- **Keep the chat as is** (`useChat`, cards, record view), pointed at the backend.
+- **Keep the chat flow** (`useChat`, cards, record view), pointed at the backend.
+- **UI redesign (2026-11-08) [user]:** the WhatsApp-style page became a dark voice stage plus a chat panel. The stage has LiveKit's Aura orb (Agents UI, via shadcn), driven by the agent's `lk.agent.state` attribute and the live audio level. The dock has mute, a microphone picker (saved per browser, switched live with `switchActiveDevice`), and start or end call. Tailwind v4 and shadcn/ui replace the hand-written CSS. The brief allows this: the starter UI is optional.
 - **Add:**
   - session creation on load
   - the "Stop request" button

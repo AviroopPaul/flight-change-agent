@@ -1,22 +1,25 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 const FOLLOW_THRESHOLD_PX = 80;
 
-const nearBottom = (): boolean =>
-  window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - FOLLOW_THRESHOLD_PX;
+const nearBottom = (el: HTMLElement): boolean => el.scrollTop + el.clientHeight >= el.scrollHeight - FOLLOW_THRESHOLD_PX;
 
-export function useFollowBottom(items: readonly unknown[], footer: unknown): void {
+/** Keeps a scroll box pinned to its newest entry, unless the user has scrolled up to read. */
+export function useFollowBottom(ref: RefObject<HTMLElement | null>, items: readonly unknown[], footer: unknown): void {
   const follow = useRef(true);
   useEffect(() => {
-    let lastY = window.scrollY;
+    const el = ref.current;
+    if (!el) return;
+    let lastTop = el.scrollTop;
     const onScroll = () => {
-      follow.current = nearBottom() || (follow.current && window.scrollY >= lastY);
-      lastY = window.scrollY;
+      follow.current = nearBottom(el) || (follow.current && el.scrollTop >= lastTop);
+      lastTop = el.scrollTop;
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [ref]);
   useLayoutEffect(() => {
-    if (follow.current && (items.length || footer)) window.scrollTo(0, document.documentElement.scrollHeight);
-  }, [items, footer]);
+    const el = ref.current;
+    if (el && follow.current && (items.length || footer)) el.scrollTop = el.scrollHeight;
+  }, [ref, items, footer]);
 }
