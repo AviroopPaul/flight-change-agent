@@ -134,6 +134,8 @@ export function App() {
             onAnswer={onAnswer}
             record={floatingRecord}
             onCloseRecord={() => record && setClosedRecord(record.key)}
+            inCall={inCall}
+            agentSpeaking={orb === "speaking"}
           />
         )}
 

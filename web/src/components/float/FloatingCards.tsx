@@ -17,6 +17,7 @@ import {
 import { TypedAnswer } from "../cards/Composer";
 import { FareTable, InlineCard } from "../cards/InlineCard";
 import { RecordCard } from "../record/RecordCard";
+import { useHeldCards } from "@/hooks/useHeldCards";
 
 interface Props {
   items: ThreadItem[];
@@ -25,6 +26,9 @@ interface Props {
   /** The newest final record, until the user closes it. */
   record: FinalRecord | null;
   onCloseRecord: () => void;
+  /** A live call is on, so cards wait for the agent to speak. */
+  inCall: boolean;
+  agentSpeaking: boolean;
 }
 
 /** A solid panel, so the cards stay readable over the orb. */
@@ -47,8 +51,8 @@ function openCardIds(items: ThreadItem[], cards: Record<string, CardEntry>): str
  * Voice-first input: each card the agent opens floats at the side (above the controls on phones),
  * and leaves once answered. A rejected answer reopens the card with its error.
  */
-export function FloatingCards({ items, cards, onAnswer, record, onCloseRecord }: Props) {
-  const ids = openCardIds(items, cards);
+export function FloatingCards({ items, cards, onAnswer, record, onCloseRecord, inCall, agentSpeaking }: Props) {
+  const ids = useHeldCards(openCardIds(items, cards), items, cards, inCall, agentSpeaking);
   const any = ids.length > 0 || record !== null;
   return (
     <>
@@ -63,7 +67,7 @@ export function FloatingCards({ items, cards, onAnswer, record, onCloseRecord }:
     <div
       aria-label="Requested inputs"
       className={cn(
-        "thin-scroll pointer-events-none fixed z-30 flex flex-col gap-3 overflow-y-auto overscroll-contain p-1",
+        "thin-scroll pointer-events-none fixed z-30 flex flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain p-1",
         "inset-x-3 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] max-h-[60dvh]",
         "sm:inset-x-auto sm:right-5 sm:w-[400px]",
         "lg:top-20 lg:bottom-24 lg:max-h-none lg:justify-center",
