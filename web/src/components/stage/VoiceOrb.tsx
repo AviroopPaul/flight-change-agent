@@ -55,7 +55,7 @@ export function VoiceOrb({ state, audioTrack, volume, live }: Props) {
         color="#1FD5F9"
         colorShift={0.35}
         themeMode="dark"
-        className={cn("relative transition-[height] duration-500", live ? "h-44 sm:h-56 lg:h-[26rem]" : "h-32 sm:h-44 lg:h-80")}
+        className={cn("relative transition-[height] duration-500", live ? "h-60 sm:h-72 lg:h-[22rem] xl:h-[26rem]" : "h-48 sm:h-60 lg:h-72 xl:h-80")}
       />
     </div>
   );

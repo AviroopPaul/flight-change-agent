@@ -288,6 +288,7 @@ A conflict is two different values for one field, one from the call and one from
   - The `audio/` capture and playback code is no longer used for the call.
 - **Keep the chat flow** (`useChat`, cards, record view), pointed at the backend.
 - **UI redesign (2026-11-08) [user]:** the WhatsApp-style page became a dark voice stage plus a chat panel. The stage has LiveKit's Aura orb (Agents UI, via shadcn), driven by the agent's `lk.agent.state` attribute and the live audio level. The dock has mute, a microphone picker (saved per browser, switched live with `switchActiveDevice`), and start or end call. Tailwind v4 and shadcn/ui replace the hand-written CSS. The brief allows this: the starter UI is optional.
+- **Voice-first layout (2026-11-08) [user]:** the conversation pane is a drawer, closed by default. Each requested input floats as a card at the side and leaves once answered; the final record floats until closed. The drawer keeps the full thread and takes input while open (floating cards hide then).
 - **Add:**
   - session creation on load
   - the "Stop request" button

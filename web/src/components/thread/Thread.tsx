@@ -10,9 +10,11 @@ interface Props {
   cards: Record<string, CardEntry>;
   barCard: OpenCard | null;
   onAnswer: (card: OpenCard, answer: Answer) => void;
+  /** False while the drawer is closed: the floating cards take the input then, so the thread only shows it. */
+  interactive: boolean;
 }
 
-export function Thread({ items, cards, barCard, onAnswer }: Props) {
+export function Thread({ items, cards, barCard, onAnswer, interactive }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useFollowBottom(scrollRef, items, cards);
   return (
@@ -21,11 +23,11 @@ export function Thread({ items, cards, barCard, onAnswer }: Props) {
         <div className="mx-auto flex max-w-2xl flex-col gap-3" role="log" aria-label="Conversation">
           {!items.length && <EmptyThread />}
           {items.map((item, i) => (
-            <ThreadEntry key={item.key} item={item} prev={items[i - 1]} cards={cards} onAnswer={onAnswer} />
+            <ThreadEntry key={item.key} item={item} prev={items[i - 1]} cards={cards} onAnswer={onAnswer} interactive={interactive} />
           ))}
         </div>
       </div>
-      <Composer card={barCard} onAnswer={(answer) => barCard && onAnswer(barCard, answer)} />
+      <Composer card={interactive ? barCard : null} onAnswer={(answer) => barCard && onAnswer(barCard, answer)} />
     </>
   );
 }
