@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { AgentState } from "@livekit/components-react";
 import {
   ConnectionState,
+  type LocalAudioTrack,
   type Participant,
   ParticipantKind,
+  type RemoteAudioTrack,
+  type RemoteParticipant,
   type RemoteTrack,
   Room,
   RoomEvent,
@@ -13,8 +17,11 @@ import { errorMessage } from "../lib/errors";
 import { Role } from "../protocol";
 import { CallState } from "../state/conversation";
 import type { CallControls, Ui } from "../state/ui";
+import { idleVoice, type VoiceState } from "../state/voice";
 
 const TRANSCRIPTION_TOPIC = "lk.transcription";
+const AGENT_STATE_ATTR = "lk.agent.state";
+const MIC_OPTIONS = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 
 interface TokenResponse {
   token?: string;
@@ -22,20 +29,31 @@ interface TokenResponse {
   error?: string;
 }
 
+export interface VoiceCall extends CallControls {
+  voice: VoiceState;
+  setMuted(muted: boolean): void;
+  /** Switches the live call to another microphone. Before a call, the next call uses it. */
+  switchMic(deviceId: string): void;
+}
+
+const isAgent = (p: Participant): boolean => p.kind === ParticipantKind.AGENT;
+const agentStateOf = (p: Participant): AgentState | null =>
+  (p.attributes?.[AGENT_STATE_ATTR] as AgentState | undefined) ?? null;
+
 /** The call runs over LiveKit (WebRTC). The backend mints a token; the voice agent joins the same room. */
-export function useCall(ui: Ui, server: Server | null, sessionId: string | null): CallControls {
+export function useCall(ui: Ui, server: Server | null, sessionId: string | null, micDeviceId: string): VoiceCall {
   const roomRef = useRef<Room | null>(null);
   const audioEls = useRef<HTMLMediaElement[]>([]);
-  const stopMeter = useRef<(() => void) | null>(null);
   const userHungUp = useRef(false);
+  const deviceRef = useRef(micDeviceId);
+  const [voice, setVoice] = useState<VoiceState>(idleVoice);
+  deviceRef.current = micDeviceId;
 
   const cleanup = useCallback(() => {
-    stopMeter.current?.();
-    stopMeter.current = null;
     audioEls.current.forEach((el) => el.remove());
     audioEls.current = [];
-    ui.setLevel(0);
-  }, [ui]);
+    setVoice(idleVoice);
+  }, []);
 
   useEffect(() => () => {
     roomRef.current?.disconnect();
@@ -62,8 +80,11 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
 
     const room = new Room({ adaptiveStream: true, dynacast: true });
     roomRef.current = room;
-    const agentHere = () => [...room.remoteParticipants.values()].some((p) => p.kind === ParticipantKind.AGENT);
+    const agentHere = () => [...room.remoteParticipants.values()].some(isAgent);
     const markLive = () => ui.setCall(CallState.CONNECTED, "on call");
+    const readAgentState = (p: Participant) => {
+      if (isAgent(p)) setVoice((v) => ({ ...v, agentState: agentStateOf(p) }));
+    };
 
     // Speech-to-text sends a caller's turn as several segments. Keep them in one bubble until the agent speaks.
     let userTurn: { id: string; done: string } | null = null;
@@ -86,18 +107,27 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
     });
 
     room
-      .on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+      .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, _pub, participant: RemoteParticipant) => {
         if (track.kind !== Track.Kind.Audio) return;
         const el = track.attach();
         el.style.display = "none";
         document.body.appendChild(el);
         audioEls.current.push(el);
+        if (isAgent(participant)) setVoice((v) => ({ ...v, agentTrack: track as RemoteAudioTrack }));
       })
+      .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+        setVoice((v) => (v.agentTrack === track ? { ...v, agentTrack: undefined } : v));
+      })
+      .on(RoomEvent.ParticipantAttributesChanged, (_changed, p: Participant) => readAgentState(p))
       .on(RoomEvent.ParticipantConnected, (p: Participant) => {
-        if (p.kind === ParticipantKind.AGENT) {
+        if (isAgent(p)) {
+          readAgentState(p);
           markLive();
           ui.addNote("Call started");
         }
+      })
+      .on(RoomEvent.ParticipantDisconnected, (p: Participant) => {
+        if (isAgent(p)) setVoice((v) => ({ ...v, agentState: null, agentTrack: undefined }));
       })
       .on(RoomEvent.Reconnecting, () => ui.setCall(CallState.RECONNECTING, "reconnecting…"))
       .on(RoomEvent.Reconnected, () => (agentHere() ? markLive() : ui.setCall(CallState.CONNECTING, "connecting…")))
@@ -110,11 +140,8 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
 
     try {
       await room.connect(auth.url, auth.token);
-      await room.localParticipant.setMicrophoneEnabled(true, {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      });
+      const device = deviceRef.current;
+      await room.localParticipant.setMicrophoneEnabled(true, device ? { ...MIC_OPTIONS, deviceId: device } : MIC_OPTIONS);
       await room.startAudio();
     } catch (err) {
       room.disconnect();
@@ -123,8 +150,11 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
       ui.setCall(CallState.ERROR, errorMessage(err, "Could not start the call or the microphone."));
       return;
     }
-    stopMeter.current = startMeter(room, ui.setLevel);
-    if (room.state === ConnectionState.Connected && agentHere()) {
+    const micTrack = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track as LocalAudioTrack | undefined;
+    setVoice((v) => ({ ...v, micTrack, muted: false }));
+    const agent = [...room.remoteParticipants.values()].find(isAgent);
+    if (room.state === ConnectionState.Connected && agent) {
+      readAgentState(agent);
       markLive();
       ui.addNote("Call started");
     } else {
@@ -139,29 +169,26 @@ export function useCall(ui: Ui, server: Server | null, sessionId: string | null)
     else ui.setCall(CallState.ENDED, "call ended");
   }, [ui]);
 
-  return useMemo(() => ({ start, hangUp }), [start, hangUp]);
-}
+  const setMuted = useCallback((muted: boolean) => {
+    const room = roomRef.current;
+    if (!room) return;
+    setVoice((v) => ({ ...v, muted }));
+    room.localParticipant.setMicrophoneEnabled(!muted).catch((err: unknown) => {
+      setVoice((v) => ({ ...v, muted: !muted }));
+      ui.setNotice(errorMessage(err, "Could not change the microphone."));
+    });
+  }, [ui]);
 
-/** Feeds the starter's mic meter from the local mic track. Returns a stop function. */
-function startMeter(room: Room, setLevel: (level: number) => void): () => void {
-  const track = room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track?.mediaStreamTrack;
-  if (!track) return () => {};
-  const ctx = new AudioContext();
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 512;
-  ctx.createMediaStreamSource(new MediaStream([track])).connect(analyser);
-  const buf = new Float32Array(analyser.fftSize);
-  let raf = 0;
-  const tick = () => {
-    analyser.getFloatTimeDomainData(buf);
-    let energy = 0;
-    for (const v of buf) energy += v * v;
-    setLevel(Math.sqrt(energy / buf.length));
-    raf = requestAnimationFrame(tick);
-  };
-  tick();
-  return () => {
-    cancelAnimationFrame(raf);
-    void ctx.close();
-  };
+  const switchMic = useCallback((deviceId: string) => {
+    deviceRef.current = deviceId;
+    const room = roomRef.current;
+    if (!room) return;
+    room
+      .switchActiveDevice("audioinput", deviceId || "default")
+      // The same track object now carries a new MediaStreamTrack; copy the state so the meters re-read it.
+      .then(() => setVoice((v) => ({ ...v })))
+      .catch((err: unknown) => ui.setNotice(errorMessage(err, "Could not switch to that microphone.")));
+  }, [ui]);
+
+  return useMemo(() => ({ start, hangUp, voice, setMuted, switchMic }), [start, hangUp, voice, setMuted, switchMic]);
 }
