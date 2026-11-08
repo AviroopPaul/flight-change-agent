@@ -50,6 +50,20 @@ class ToolLogic:
     async def stop_request(self) -> str:
         return speak(await self.client.opt_out())
 
+    async def end_call_blocker(self, caller_is_leaving: bool) -> str | None:
+        """Why the agent must not hang up yet, or None. A request still open in the chat keeps the call
+        going, unless the caller says they must leave. If the backend is down, never trap the caller."""
+        if caller_is_leaving:
+            return None
+        ctx = await self.client.context()
+        if not ctx.get("ok") or (ctx.get("state") or {}).get("locked"):
+            return None
+        card = ctx.get("openCard")
+        left = f" The chat box for {card['label']} is still open." if card else ""
+        return ("Not hung up: the request is not finished." + left + " Do not say goodbye. Tell the caller "
+                "what is left and wait. Only if they say they must go, tell them they can finish in the chat, "
+                "then call end_call with caller_is_leaving true.")
+
     async def check_status(self) -> str:
         ctx = await self.client.context()
         if not ctx.get("ok"):
@@ -121,8 +135,12 @@ class FlightAgent(Agent):
         return await self.logic.check_status()
 
     @function_tool()
-    async def end_call(self, context: RunContext) -> str:
-        """Hang up after you have said goodbye."""
+    async def end_call(self, context: RunContext, caller_is_leaving: bool = False) -> str:
+        """Hang up after you have said goodbye. Set caller_is_leaving only when the caller says they must go
+        before the request is finished."""
+        blocker = await self.logic.end_call_blocker(caller_is_leaving)
+        if blocker:
+            return blocker
         await context.wait_for_playout()
         job = get_job_context()
 

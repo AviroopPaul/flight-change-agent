@@ -81,7 +81,7 @@ async def get_row(pool: asyncpg.Pool, session_id: str):
         return await repo.get_row(conn, session_id)
 
 
-async def events_since(pool: asyncpg.Pool, session_id: str, after_id: int) -> list[tuple[int, str, dict]]:
+async def events_since(pool: asyncpg.Pool, session_id: str, after_id: int) -> list[tuple[int, str, dict, datetime]]:
     async with pool.acquire() as conn:
         return await repo.events_since(conn, session_id, after_id)
 

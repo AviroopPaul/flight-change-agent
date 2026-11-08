@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.chat import service
 from app.sessions import service as sessions
+from app.telemetry import service as telemetry
 
 router = APIRouter()
 
@@ -24,7 +25,10 @@ async def chat(ws: WebSocket, sessionId: str = "", after: int = 0):  # noqa: N80
         events = await sessions.events_since(app.state.pool, sessionId, after)
         state = await sessions.load(app.state.pool, sessionId)
         last = max([after] + [e[0] for e in events])
-        for m in service.replay_messages(state, events):
+        # A fresh page has no thread, so it also gets the spoken call lines. A resume (after > 0)
+        # already showed them live from the call.
+        turns = await telemetry.all_turns(app.state.pool, sessionId) if after == 0 else []
+        for m in service.replay_messages(state, events, turns):
             await ws.send_json(m)
 
         async def pump():

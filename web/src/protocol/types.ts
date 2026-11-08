@@ -35,6 +35,7 @@ export interface ChatMessage {
   role: Role;
   text: string;
   id?: string;
+  spoken?: boolean; // a call line replayed after a reload; shown like the live call transcript
 }
 
 export interface InputOption {

@@ -18,6 +18,11 @@ async def last_turns(conn, session_id: str, n: int) -> list[dict]:
     return [{"role": r["role"], "text": r["text"]} for r in rows]
 
 
+async def all_turns(conn, session_id: str) -> list[tuple[int, str, str, object]]:
+    rows = await conn.fetch("select id, role, text, at from transcript where session_id = $1 order by id", session_id)
+    return [(r["id"], r["role"], r["text"], r["at"]) for r in rows]
+
+
 async def add_usage(conn, session_id: str, kind: str, quantity: float) -> None:
     await conn.execute("insert into usage (session_id, kind, quantity) values ($1, $2, $3)",
                        session_id, kind, quantity)

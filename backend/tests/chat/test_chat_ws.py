@@ -126,3 +126,33 @@ def test_ws_unknown_session_closes(tc):
 
     with pytest.raises(WebSocketDisconnect), tc.websocket_connect("/chat?sessionId=s_missing") as ws:
         ws.receive_json()
+
+
+def test_ws_full_replay_includes_spoken_turns_in_order(tc):
+    from tests.calls.conftest import AUTH
+    sid = new_session(tc)
+    turn = f"/internal/sessions/{sid}/transcript"
+    with tc.websocket_connect(f"/chat?sessionId={sid}") as ws:
+        until(ws, card_for("pnr"))
+    tc.post(turn, json={"role": "agent", "text": "What's the reason for the change?"}, headers=AUTH)
+    tc.post(turn, json={"role": "user", "text": "I have to call in sick."}, headers=AUTH)
+    with tc.websocket_connect(f"/chat?sessionId={sid}") as ws:
+        _, seen = until(ws, lambda m: m.get("text") == "I have to call in sick.")
+    spoken = [m for m in seen if m.get("spoken")]
+    assert [(m["role"], m["text"]) for m in spoken] == [
+        ("agent", "What's the reason for the change?"), ("user", "I have to call in sick.")]
+    assert all(m["type"] == "message" and "eventId" not in m for m in spoken)  # resume ids stay event ids
+    order = [m.get("text") or m["type"] for m in seen]
+    assert order.index(WELCOME) < order.index("inputRequest") < order.index("What's the reason for the change?")
+
+
+def test_ws_resume_does_not_repeat_spoken_turns(tc):
+    from tests.calls.conftest import AUTH
+    sid = new_session(tc)
+    with tc.websocket_connect(f"/chat?sessionId={sid}") as ws:
+        welcome = ws.receive_json()
+        tc.post(f"/internal/sessions/{sid}/transcript", json={"role": "user", "text": "hello"}, headers=AUTH)
+        until(ws, card_for("pnr"))
+    with tc.websocket_connect(f"/chat?sessionId={sid}&after={welcome['eventId']}") as ws:
+        _, seen = until(ws, card_for("pnr"))
+    assert not any(m.get("spoken") for m in seen)  # the call already showed them live

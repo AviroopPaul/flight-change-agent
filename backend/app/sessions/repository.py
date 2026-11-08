@@ -39,12 +39,12 @@ async def insert_event(conn, session_id: str, now: datetime, kind: str, payload:
     )
 
 
-async def events_since(conn, session_id: str, after_id: int) -> list[tuple[int, str, dict]]:
+async def events_since(conn, session_id: str, after_id: int) -> list[tuple[int, str, dict, datetime]]:
     rows = await conn.fetch(
-        "select id, kind, payload from events where session_id = $1 and id > $2 order by id",
+        "select id, kind, payload, at from events where session_id = $1 and id > $2 order by id",
         session_id, after_id,
     )
-    return [(r["id"], r["kind"], r["payload"]) for r in rows]
+    return [(r["id"], r["kind"], r["payload"], r["at"]) for r in rows]
 
 
 async def count_created_since(conn, since: datetime, ip_hash: str | None = None) -> int:

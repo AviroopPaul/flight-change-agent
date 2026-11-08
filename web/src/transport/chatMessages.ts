@@ -6,7 +6,8 @@ export function handleChatMessage(ui: Ui, data: unknown): void {
   const msg = parseMessage<ChatServerMessage>(data);
   switch (msg?.type) {
     case ChatServerMessageType.MESSAGE:
-      ui.addMessage(msg);
+      if (msg.spoken) ui.addTranscript({ role: msg.role, text: msg.text, final: true, id: msg.id });
+      else ui.addMessage(msg);
       break;
     case ChatServerMessageType.INPUT_REQUEST:
       ui.showInputCard(msg);

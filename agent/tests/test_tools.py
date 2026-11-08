@@ -88,3 +88,30 @@ def test_no_round_trip_only_tools():
     names = {t.info.name if hasattr(t, "info") else t.__name__ for t in FlightAgent(client(), instructions="x").tools}
     assert "set_focus" not in names and "set_reason_category" not in names
     assert {"record_answer", "send_chat_request", "end_call"} <= names
+
+
+def _ctx(locked, card=None):
+    return httpx.Response(200, json={"ok": True, "openCard": card, "state": {
+        "requestType": "refund", "locked": locked, "outcome": "completed" if locked else None, "fields": {}}})
+
+
+@respx.mock
+async def test_end_call_refused_while_request_is_open():
+    respx.get(f"{BASE}/internal/sessions/{SID}/context").mock(return_value=_ctx(
+        False, {"id": "r2", "field": "passengerNames", "label": "Passenger 1 of 2: full name as on ID"}))
+    out = await ToolLogic(client()).end_call_blocker(caller_is_leaving=False)
+    assert out and "not finished" in out and "Passenger 1 of 2" in out and "goodbye" in out
+
+
+@respx.mock
+async def test_end_call_allowed_when_complete_or_caller_leaves():
+    respx.get(f"{BASE}/internal/sessions/{SID}/context").mock(return_value=_ctx(True))
+    assert await ToolLogic(client()).end_call_blocker(caller_is_leaving=False) is None
+    respx.get(f"{BASE}/internal/sessions/{SID}/context").mock(return_value=_ctx(False))
+    assert await ToolLogic(client()).end_call_blocker(caller_is_leaving=True) is None
+
+
+@respx.mock
+async def test_end_call_allowed_when_backend_is_down():
+    respx.get(f"{BASE}/internal/sessions/{SID}/context").mock(side_effect=httpx.ConnectError("down"))
+    assert await ToolLogic(client()).end_call_blocker(caller_is_leaving=False) is None

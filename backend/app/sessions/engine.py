@@ -654,7 +654,16 @@ def refund_instead(state: SessionState, now: datetime, call_active: bool = False
     s.requested = [f for f in s.requested if f not in REFUND_SKIPS]
     events.append(_msg("Okay, we'll treat this as a refund request. A person will review it."))
     _advance(s, now, call_active, events)
-    return _done(s, events, Ok("Switched to a refund request."))
+    return _done(s, events, Ok(_refund_reply(s)))
+
+
+def _refund_reply(s: SessionState) -> str:
+    """Tell the agent the request is not done yet, so it does not say goodbye early."""
+    missing = [FIELD_LABELS[f] for f in ALL_FIELDS if _applies(s, f) and not _valid(s, f)]
+    if not missing:
+        return "Switched to a refund request."
+    return (f"Switched to a refund request. It is not finished: a person needs the {', '.join(missing)} first. "
+            "Do not say goodbye yet." + _wait_hint(s))
 
 
 def _opt_out(s: SessionState, events: list[Event]) -> Result:

@@ -34,21 +34,33 @@ def live_message(eid: int, kind: str, payload: dict) -> dict | None:
     return None  # answer and fieldUpdate are not sent live (the page shows its own answers)
 
 
-def replay_messages(state: SessionState, events: list[tuple[int, str, dict]]) -> list[dict]:
-    answered = {p.get("requestId") for _, k, p in events if k == "answer"}
+def _event_messages(state: SessionState, events: list[tuple]) -> list[tuple[object, dict]]:
+    answered = {e[2].get("requestId") for e in events if e[1] == "answer"}
     open_ids = {state.open_card.id} if state.open_card else set()
     out = []
-    for eid, kind, p in events:
+    for eid, kind, p, at in events:
+        msg = None
         if kind == "inputRequest":
             if p["id"] in open_ids:
-                out.append(_with_id({"type": "inputRequest", **p}, eid))
+                msg = _with_id({"type": "inputRequest", **p}, eid)
             elif p["id"] in answered:
-                out.append(_with_id({"type": "message", "role": "agent", "text": p["label"], "id": f"e{eid}"}, eid))
+                msg = _with_id({"type": "message", "role": "agent", "text": p["label"], "id": f"e{eid}"}, eid)
         elif kind == "answer":
-            out.append(_with_id({"type": "message", "role": "user", "text": str(p["value"]), "id": f"e{eid}"}, eid))
+            msg = _with_id({"type": "message", "role": "user", "text": str(p["value"]), "id": f"e{eid}"}, eid)
         elif kind in ("message", "record"):
-            out.append(live_message(eid, kind, p))
+            msg = live_message(eid, kind, p)
+        if msg is not None:
+            out.append((at, msg))
     return out
+
+
+def replay_messages(state: SessionState, events: list[tuple], turns: list[tuple] = ()) -> list[dict]:
+    """History for a new socket. Spoken call lines (turns) go in by time; they carry no eventId,
+    so a resume with ?after= never skips or repeats chat events because of them."""
+    spoken = [(at, {"type": "message", "role": role, "text": text, "id": f"t{tid}", "spoken": True})
+              for tid, role, text, at in turns]
+    merged = sorted(_event_messages(state, events) + spoken, key=lambda m: m[0])  # stable: ties keep events first
+    return [m for _, m in merged]
 
 
 async def _autostart(app: FastAPI, session_id: str) -> None:
