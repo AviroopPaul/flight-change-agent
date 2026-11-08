@@ -64,6 +64,7 @@ def test_one_card_at_a_time():
     assert len(cards(r1.events) + cards(r2.events)) == 1
     pnr_card = r2.state.open_card
     r3 = answer_card(r2.state, pnr_card.id, "abc123", NOW, True)
+    # One card at a time: the requested email comes first, then the names.
     assert [c["field"] for c in cards(r3.events)] == ["contactEmail"]
     assert r3.state.fields["pnr"].value == "ABC123"
 
@@ -301,3 +302,53 @@ def test_focus_follows_the_conversation():
     assert r.state.focus == "pnr"
     r = answer_card(r.state, r.state.open_card.id, "ABC123", NOW, True)
     assert r.state.focus == "passengerNames"
+
+
+# ---------- every card blocks until it is answered, the optional email included ----------
+
+def no_email_ready_for_flight():
+    return state_with(pnr="ABC123", passengerNames=["RAHUL SHARMA"], changeReason="meeting moved",
+                      newTravelDate="2026-12-13", timeFlexibility="any")
+
+
+def test_optional_email_blocks_flights_until_answered():
+    r = advance(no_email_ready_for_flight(), NOW, False)
+    assert [c["field"] for c in cards(r.events)] == ["contactEmail"]
+    assert r.state.open_card.required is False
+
+
+def test_skipping_email_opens_flights():
+    r = advance(no_email_ready_for_flight(), NOW, False)
+    r = answer_card(r.state, r.state.open_card.id, None, NOW, False)
+    assert r.state.fields["contactEmail"].status == "valid"
+    assert [c["field"] for c in cards(r.events)] == ["selectedFlight"]
+
+
+def test_typed_email_opens_flights():
+    r = advance(no_email_ready_for_flight(), NOW, False)
+    r = answer_card(r.state, r.state.open_card.id, "me@example.com", NOW, False)
+    assert r.state.fields["contactEmail"].value == "me@example.com"
+    assert r.state.open_card.field == "selectedFlight"
+
+
+def test_spoken_answer_while_card_open_says_to_wait():
+    """The agent must not move on while a chat card is open; the tool result tells it so."""
+    r = request_chat_input(new_state("s1"), "pnr", NOW, True)
+    r = submit_call_value(r.state, "newTravelDate", "2026-12-13", NOW, True)
+    assert r.reply.ok
+    assert "Booking reference (PNR)" in r.reply.value and "wait" in r.reply.value.lower()
+
+
+def test_spoken_value_equal_to_typed_keeps_chat_source():
+    """Live test: the date was picked in the chat, the agent saved the same date, and the record said 'call'."""
+    s = state_with(newTravelDate="2026-12-13")
+    r = submit_call_value(s, "newTravelDate", "2026-12-13", NOW, True)
+    assert r.reply.ok
+    assert r.state.fields["newTravelDate"].source == "chat"
+
+
+def test_call_start_and_end_track_running_call():
+    r = engine.call_started(new_state("s1"), NOW)
+    assert r.state.call_started_at == NOW
+    r = engine.call_ended(r.state, 90, NOW + timedelta(seconds=90))
+    assert r.state.call_started_at is None and r.state.call_seconds == 90

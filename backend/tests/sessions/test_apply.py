@@ -73,3 +73,4 @@ async def test_concurrent_answers_one_wins(pool):
     assert kinds.count("answer") == 1 and kinds.count("inputError") == 1
     evs = await events_since(pool, sid, 0)
     assert [k for _, k, _ in evs].count("answer") == 1
+

@@ -4,6 +4,7 @@ import logging
 
 from fastapi import FastAPI
 
+from app.sessions.engine import spoken_date
 from app.core.tasks import spawn
 from app.records.service import deliver_pending
 from app.sessions.service import ApplyOutcome
@@ -19,13 +20,26 @@ async def deliver_now(app: FastAPI) -> int:
 CALL_KINDS = {"fieldUpdate", "answer", "message"}
 
 
+def call_events(events: list, state) -> list[tuple[str, dict]]:
+    """Chat events for the call agent. The last fieldUpdate also says which chat box is open now, so the agent
+    knows whether to wait (one input at a time) or to ask its next spoken question."""
+    out = [(ev.kind, dict(ev.payload)) for ev in events if ev.kind in CALL_KINDS]
+    last = max((i for i, (k, _) in enumerate(out) if k == "fieldUpdate"), default=None)
+    if last is not None:
+        card = state.open_card
+        out[last][1]["openCard"] = None if card is None else {
+            "field": card.field, "label": card.label, "optional": card.required is False}
+    return out
+
+
 def record_summary(record: dict) -> str:
     """What the agent says when the session ends during a call (spec section 9)."""
     outcome = record["outcome"]
     if outcome == "completed":
         fl = record["fields"]["selectedFlight"]["value"] or {}
         q = record.get("quote") or {}
-        when = fl.get("departure", "")[:16].replace("T", " at ")
+        dep = fl.get("departure", "")
+        when = f"{spoken_date(dep[:10])} at {dep[11:16]}" if len(dep) >= 16 else dep
         if q.get("amountDue"):
             money = f"You pay {q['amountDue']:,} rupees."
         elif q.get("refundDue"):
@@ -52,9 +66,8 @@ def after_apply(app: FastAPI, session_id: str, outcome: ApplyOutcome, origin: st
         spawn(app, deliver_now(app))
     if outcome.call_active and origin != "agent":
         lk = app.state.livekit
-        for ev in outcome.events:
-            if ev.kind in CALL_KINDS:
-                spawn(app, lk.send_event(session_id, ev.kind, ev.payload))
+        for kind, payload in call_events(outcome.events, outcome.state):
+            spawn(app, lk.send_event(session_id, kind, payload))
         if outcome.record is not None:
             spawn(app, lk.send_event(session_id, "outcome", {
                 "outcome": outcome.record["outcome"], "summary": record_summary(outcome.record)}))

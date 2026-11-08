@@ -10,7 +10,7 @@ import { useConversation } from "./hooks/useConversation";
 import { initialState, isInCall, ThreadItemKind } from "./state/conversation";
 
 export function App() {
-  const { state, card, ui, submit } = useConversation(() =>
+  const { state, barCard, ui, submit } = useConversation(() =>
     config.setupProblem ? initialState({ text: "no server configured", disabled: true }, config.setupProblem) : initialState(),
   );
   const session = useSession(config.backend);
@@ -37,7 +37,8 @@ export function App() {
         serverLabel={config.serverLabel}
         sessionId={session.sessionId ?? "starting…"}
         items={state.items}
-        card={card}
+        cards={state.cards}
+        barCard={barCard}
         onAnswer={(open, answer) => submit(open.spec, answer, sendInput)}
       />
     </>

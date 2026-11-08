@@ -24,6 +24,7 @@ from livekit.plugins import deepgram, google, silero
 from livekit.plugins.turn_detector.english import EnglishModel
 
 from backend_client import BackendClient
+from gcp import vertex_credentials
 from prompts import GREETING, TIME_LIMIT, event_note, resume_line, system_prompt
 from tools import FlightAgent
 from turns import TurnTracker
@@ -41,25 +42,33 @@ server = AgentServer()
 
 def prewarm(proc: JobProcess) -> None:
     proc.userdata["vad"] = silero.VAD.load()
+    # Parse the service-account key here: on the call's event loop it blocked audio for ~200 ms.
+    proc.userdata["gcp"] = vertex_credentials()
 
 
 server.setup_fnc = prewarm
 
 
-def gemini_llm(model: str) -> google.LLM:
+def gemini_llm(model: str, location: str, credentials) -> google.LLM:
+    # Gemini on Vertex AI in the billed GCP project.
     # "minimal" thinking: fastest first token; at "low" Flash-Lite once dropped a tool argument.
-    return google.LLM(model=model, api_key=os.environ["GOOGLE_API_KEY"], temperature=0.3,
+    return google.LLM(model=model, vertexai=True, project=os.environ["GOOGLE_CLOUD_PROJECT"],
+                      location=location, credentials=credentials, temperature=0.3,
                       thinking_config={"thinking_level": "MINIMAL"})
 
 
-def build_session(vad) -> AgentSession:
+def build_session(vad, credentials) -> AgentSession:
     return AgentSession(
         # endpointing_ms 25 (the plugin default) cut speech into short finals at every small pause.
         stt=deepgram.STT(model="nova-3", language=os.getenv("STT_LANGUAGE", "en-IN"), endpointing_ms=400,
                          smart_format=True, keyterm=["PNR", "booking reference", "refund"]),
-        # Cheapest working Gemini Flash (3.5 Flash-Lite), with 3.5 Flash if it fails.
-        llm=FallbackAdapter([gemini_llm(os.getenv("LLM_MODEL", "gemini-3.5-flash-lite")),
-                             gemini_llm(os.getenv("LLM_FALLBACK_MODEL", "gemini-3.5-flash"))],
+        # 3.5 Flash-Lite in asia-south1 (near the agent). 3.1 Flash-Lite costs ~$0.002 less per session
+        # but Vertex serves it only from "global", and live tool-chain turns took 7-9 s on it (vs ~2 s).
+        # It stays as the fallback. Both got 18/18 tool calls right on the agent prompt.
+        llm=FallbackAdapter([gemini_llm(os.getenv("LLM_MODEL", "gemini-3.5-flash-lite"),
+                                        os.getenv("LLM_LOCATION", "asia-south1"), credentials),
+                             gemini_llm(os.getenv("LLM_FALLBACK_MODEL", "gemini-3.1-flash-lite"),
+                                        os.getenv("LLM_FALLBACK_LOCATION", "global"), credentials)],
                             attempt_timeout=10.0),  # Gemini rejects request deadlines under 10 s
         tts=deepgram.TTS(model=os.getenv("TTS_VOICE", "aura-2-thalia-en")),
         vad=vad,
@@ -93,7 +102,7 @@ async def entrypoint(ctx: JobContext) -> None:
     await client.call_status(True)
     context = await client.context()
     agent = FlightAgent(client, instructions=system_prompt(context))
-    session = build_session(ctx.proc.userdata["vad"])
+    session = build_session(ctx.proc.userdata["vad"], ctx.proc.userdata["gcp"])
     turns = TurnTracker()
 
     @session.on("conversation_item_added")
@@ -128,6 +137,8 @@ async def entrypoint(ctx: JobContext) -> None:
         await asyncio.sleep(0.5)
         await ctx.delete_room()
 
+    pending_reply: dict = {"h": None}
+
     async def on_event(kind: str, payload: dict) -> None:
         if kind == "outcome":
             await session.interrupt()
@@ -140,7 +151,12 @@ async def entrypoint(ctx: JobContext) -> None:
         chat_ctx.add_message(role="system", content=note)
         await agent.update_chat_ctx(chat_ctx)
         if kind == "fieldUpdate" and session.user_state != "speaking" and session.agent_state != "speaking":
-            session.generate_reply(instructions=f"{note} Acknowledge it in one short sentence and continue.")
+            # A newer chat answer makes a reply to an older one stale before it is spoken: drop it, answer the newest.
+            old = pending_reply["h"]
+            if old is not None and not old.done():
+                old.interrupt()
+            pending_reply["h"] = session.generate_reply(
+                instructions=f"{note} Acknowledge it in one short sentence, then do what the note says.")
 
     def _on_data(packet: rtc.DataPacket) -> None:
         if packet.topic != EVENT_TOPIC:

@@ -23,6 +23,12 @@ def _value(state: SessionState, name: str):
     return f.value
 
 
+def _call_seconds(state: SessionState, now: datetime) -> int:
+    """Ended calls, plus the call still running when the record is built (else a mid-call record says 0)."""
+    running = int((now - state.call_started_at).total_seconds()) if state.call_started_at else 0
+    return state.call_seconds + max(0, running)
+
+
 def build_record(state: SessionState, outcome: str, reason: str, *, now: datetime, cost_usd: float,
                  ended_at: datetime) -> dict:
     fields = {}
@@ -59,7 +65,8 @@ def build_record(state: SessionState, outcome: str, reason: str, *, now: datetim
         conflicts=[RecordConflict.model_validate(c.model_dump()) for c in state.conflicts],
         booking=booking,
         quote=quote,
-        engagement=Engagement(calls=state.calls, call_seconds=state.call_seconds, chat_messages=state.chat_messages),
+        engagement=Engagement(calls=state.calls, call_seconds=_call_seconds(state, now),
+                              chat_messages=state.chat_messages),
         cost_usd=cost_usd,
         ended_at=ended_at,
     )

@@ -4,7 +4,7 @@ import { clockTime } from "../lib/format";
 import { nextKey } from "../lib/ids";
 import type { InputRequest } from "../protocol";
 import { ActionType } from "../state/actions";
-import { isInCall, selectOpenCard, type Answer, type ConversationState } from "../state/conversation";
+import { isInCall, selectBarCard, type Answer, type ConversationState } from "../state/conversation";
 import { setMicLevel } from "../state/micLevel";
 import { conversationReducer } from "../state/reducer";
 import type { SendInput, Ui } from "../state/ui";
@@ -73,8 +73,8 @@ export function useConversation(init: () => ConversationState) {
     }
   }, []);
 
-  const { active, cards } = state;
-  const card = useMemo(() => selectOpenCard({ active, cards }), [active, cards]);
+  const { cards } = state;
+  const barCard = useMemo(() => selectBarCard(cards), [cards]);
 
-  return { state, card, ui, submit };
+  return { state, barCard, ui, submit };
 }

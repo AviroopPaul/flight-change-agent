@@ -122,7 +122,7 @@ async def call(session_id: str, request: Request):
     if isinstance(body, dict):
         return body
     if body.active:
-        return await service.run(request.app, session_id, lambda s, ca: engine.call_started(s),
+        return await service.run(request.app, session_id, lambda s, ca: engine.call_started(s, now_ist()),
                                  set_call_active=True)
     return await service.run(request.app, session_id,
                              lambda s, ca: engine.call_ended(s, body.seconds, now_ist()), set_call_active=False)

@@ -3,7 +3,7 @@
 PRICES = {
     "deepgram_stt_per_min": 0.0077,
     "deepgram_tts_per_1k_chars": 0.030,
-    "llm_in_per_m": 0.30,  # Gemini 3.5 Flash-Lite (fallback 3.5 Flash costs more: 1.50 / 9.00)
+    "llm_in_per_m": 0.30,  # Gemini 3.5 Flash-Lite (fallback 3.1 Flash-Lite is cheaper: 0.25 / 1.50)
     "llm_out_per_m": 2.50,
     "livekit_per_min": 0.0,
 }

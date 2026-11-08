@@ -5,16 +5,33 @@ import { prefillFileInput } from "../../lib/files";
 import { INPUT_TYPES, inputId } from "../../lib/inputs";
 import { InputKind } from "../../protocol";
 import type { Answer, OpenCard } from "../../state/conversation";
-import { ClipIcon } from "../icons";
+import { ClipIcon, SendIcon } from "../icons";
 import { ErrorLine } from "./ErrorLine";
 import { SendButton } from "./SendButton";
 
 interface Props {
-  card: OpenCard;
+  card: OpenCard | null;
   onAnswer: (answer: Answer) => void;
 }
 
+/** The bottom bar: plain typing only. It answers the open typed question, and waits when there is none. */
 export function Composer({ card, onAnswer }: Props) {
+  if (!card) {
+    return (
+      <div className="card composer-bar idle">
+        <div className="composer">
+          <input className="pill" disabled placeholder="Answer the questions above, or talk on the call" aria-label="Message" />
+          <button type="button" className="send" aria-label="Send" disabled>
+            <SendIcon />
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return <ActiveComposer key={card.key} card={card} onAnswer={onAnswer} />;
+}
+
+function ActiveComposer({ card, onAnswer }: { card: OpenCard; onAnswer: (answer: Answer) => void }) {
   const { spec, previous } = card;
   const [error, setError] = useState(card.error);
   const [text, setText] = useState(previous?.value != null ? String(previous.value) : "");

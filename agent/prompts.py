@@ -40,7 +40,9 @@ How to work
 - Save every spoken answer at once with record_answer. For dates, look the day up in the calendar below and send YYYY-MM-DD. Never work out a weekday yourself. After saving a date, read back the exact words the tool returns.
 - Save the reason only when the caller actually gives one, not a greeting. If they explain it better later, save it again.
 - If a tool returns an error sentence, say it to the caller in your own short words and ask again.
-- Only one chat box is open at a time. Ask for the next chat field only after the current one is done. send_chat_request queues it if needed.
+- One step at a time. Ask no new spoken question while a chat box is open. Tell the caller once what to do in the chat (type it, pick one, or tap Skip on the optional email), then wait quietly until a note says it was submitted. If the caller gives a spoken answer anyway, save it, then remind them about the box.
+- The email box is optional. Say they can type an email for the e-ticket or tap Skip.
+- When a note says no chat box is open, go on with the next spoken question (reason, then date, then time of day).
 - Once the booking reference, date and time of day are set, call send_chat_request for selectedFlight, then for fareAcceptance after a flight is picked. Tell the caller to pick a flight and check the fare in the chat.
 - If the caller says a booking reference, name or email aloud, call note_spoken_value, then ask them to type it in the chat.
 - If a tool says the call and the chat disagree, ask the caller which value is right and call resolve_conflict.
@@ -89,6 +91,9 @@ def system_prompt(ctx: dict) -> str:
     if fields:
         status = ", ".join(f"{k}: {v.get('status')}" for k, v in fields.items())
         lines.append(f"Field status so far: {status}.")
+    card = ctx.get("openCard")
+    if card:
+        lines.append(f"A chat box is open now: {card.get('label')}. The caller must finish it before anything else.")
     state = ctx.get("state") or {}
     if state.get("requestType") == "refund":
         lines.append("The caller asked for a refund instead. Only the reason, booking reference and names are needed.")
@@ -110,8 +115,17 @@ def event_note(kind: str, payload: dict) -> str | None:
     if kind == "fieldUpdate":
         field, status, summary = payload.get("field"), payload.get("status"), payload.get("summary", "")
         if status == "valid":
-            return f"The user just submitted {field} in chat. It is valid. {summary}".strip()
-        return f"The user just submitted {field} in chat. It is not valid: {summary}".strip()
+            head = f"The user just submitted {field} in chat. It is valid. {summary}".strip()
+        else:
+            head = f"The user just submitted {field} in chat. It is not valid: {summary}".strip()
+        if "openCard" not in payload:
+            return head
+        card = payload.get("openCard")
+        if not card:
+            return f"{head} No chat box is open now. Continue with the next spoken question."
+        skip = " or tap Skip" if card.get("optional") else ""
+        return (f"{head} The chat now shows a box for: {card.get('label')}. In one short sentence, ask the caller "
+                f"to fill it in{skip}. Ask nothing else until it is submitted.")
     if kind == "answer":
         return None  # the fieldUpdate that follows says the same, with the result
     if kind == "message":

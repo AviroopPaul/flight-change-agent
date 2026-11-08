@@ -64,3 +64,27 @@ def test_system_prompt_has_two_week_calendar():
     p = system_prompt(CTX)
     assert "Fri 13 Nov = 2026-11-13" in p
     assert "Sat 21 Nov = 2026-11-21" in p
+
+
+def test_event_note_names_the_open_card_and_says_wait():
+    note = event_note("fieldUpdate", {"field": "passengerNames", "status": "valid", "summary": "All match.",
+                                      "openCard": {"field": "contactEmail", "label": "Email for your new e-ticket (optional)",
+                                                   "optional": True}})
+    assert "Email for your new e-ticket" in note
+    assert "Skip" in note and "Ask nothing else" in note
+
+
+def test_event_note_without_open_card_says_continue():
+    note = event_note("fieldUpdate", {"field": "contactEmail", "status": "valid", "summary": "Email saved.",
+                                      "openCard": None})
+    assert "No chat box is open" in note
+
+
+def test_system_prompt_mentions_box_open_at_start():
+    ctx = dict(CTX, openCard={"field": "pnr", "label": "Booking reference (PNR)", "required": True})
+    assert "A chat box is open now: Booking reference (PNR)" in system_prompt(ctx)
+
+
+def test_rules_say_one_step_at_a_time():
+    p = system_prompt(CTX)
+    assert "Ask no new spoken question while a chat box is open" in p

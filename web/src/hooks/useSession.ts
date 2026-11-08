@@ -21,10 +21,13 @@ export function useSession(server: Server | null): SessionInfo {
           if (!cancelled) setInfo({ sessionId: null, error: body.error ?? "Could not start a session. Please reload." });
           return;
         }
+        // A cancelled run (StrictMode's dev double-mount) must not write its id: the page would show one
+        // session and the URL another.
+        if (cancelled) return;
         const params = new URLSearchParams(location.search);
         params.set("sessionId", body.sessionId);
         history.replaceState(null, "", `${location.pathname}?${params}${location.hash}`);
-        if (!cancelled) setInfo({ sessionId: body.sessionId, error: null });
+        setInfo({ sessionId: body.sessionId, error: null });
       } catch {
         if (!cancelled) setInfo({ sessionId: null, error: `Can't reach the server at ${server.http}. Please reload.` });
       }

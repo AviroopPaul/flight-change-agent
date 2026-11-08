@@ -36,11 +36,11 @@ def live_message(eid: int, kind: str, payload: dict) -> dict | None:
 
 def replay_messages(state: SessionState, events: list[tuple[int, str, dict]]) -> list[dict]:
     answered = {p.get("requestId") for _, k, p in events if k == "answer"}
-    open_id = state.open_card.id if state.open_card else None
+    open_ids = {state.open_card.id} if state.open_card else set()
     out = []
     for eid, kind, p in events:
         if kind == "inputRequest":
-            if p["id"] == open_id:
+            if p["id"] in open_ids:
                 out.append(_with_id({"type": "inputRequest", **p}, eid))
             elif p["id"] in answered:
                 out.append(_with_id({"type": "message", "role": "agent", "text": p["label"], "id": f"e{eid}"}, eid))

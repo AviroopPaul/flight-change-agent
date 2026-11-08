@@ -115,3 +115,12 @@ def test_record_has_no_passenger_names_outside_fields():
 def test_json_schema_exports():
     schema = FinalRecord.model_json_schema(by_alias=True)
     assert "sessionId" in schema["properties"] and "costUsd" in schema["properties"]
+
+
+def test_record_counts_time_of_a_call_still_running():
+    """Live test: the record was built while the call was on and said callSeconds 0."""
+    from datetime import timedelta
+    s = completed_state()
+    s.calls, s.call_seconds, s.call_started_at = 1, 30, NOW - timedelta(seconds=200)
+    rec = build_record(s, "completed", "done", now=NOW, cost_usd=0.0, ended_at=NOW)
+    assert rec["engagement"]["callSeconds"] == 230

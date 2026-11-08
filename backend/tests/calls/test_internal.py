@@ -23,7 +23,7 @@ async def test_fields_messy_date_returns_speakable_error(client, lk, sid):
 
 async def test_fields_ok(client, lk, sid):
     r = await client.post(url(sid, "/fields"), json={"field": "timeFlexibility", "value": "Any time"}, headers=AUTH)
-    assert r.json()["ok"] is True and r.json()["result"] == "any"
+    assert r.json()["ok"] is True and r.json()["result"].startswith("any")
 
 
 async def test_unknown_field_ok_false(client, lk, sid):

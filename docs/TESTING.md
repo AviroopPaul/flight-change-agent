@@ -39,14 +39,14 @@ Mark each one Pass or Fail, and note the session id for any failure.
 
 1. Open the site. A welcome message shows. Tap the call button.
 2. The agent greets you and asks for the reason. Say: **"My work meeting was moved, so I need to change my flight."**
-3. A box for the booking reference appears in the chat. Type **`ABC123`**.
+3. The agent asks for the booking reference in the chat. Type **`ABC123`** in the bar at the bottom.
 4. The next box asks for the passenger name. Type **`Rahul Sharma`**.
-5. An optional email box may appear. Type **`test@example.com`** or tap Skip.
+5. An optional email question appears, with a field, **Save** and **Skip** inside it. The agent says you can type it or skip it, then waits: nothing else is asked until you tap **Skip** (or type an email and tap **Save**). Tap **Skip**.
 6. When the agent asks for the new date, say: **"The twentieth of December."** It should read the date back.
 7. When it asks for the time of day, say: **"Afternoon."**
-8. A flight list appears in the chat. Pick the first option.
-9. A fare box appears with old fare, new fare, change fee and the total. Tap **Yes**.
-10. **Expect:** the agent reads a short summary and hangs up. The chat shows the record with `outcome: completed`. The record link above shows the same record.
+8. A flight list appears as an agent message (left side). Pick the first option.
+9. A fare message shows old fare, new fare, change fee and the total. Tap **Yes**.
+10. **Expect:** the agent reads a short summary (with the date in words) and hangs up. The chat shows a "Flight change confirmed" card. The record link above shows the same record, with `contactEmail` skipped (null).
 
 ### 2. Two passengers (expected: `completed`)
 
@@ -109,7 +109,7 @@ On the call, say: **"I want to stop this request."** The agent asks you to confi
 ### 11. Chat only, never call (expected: `completed`)
 
 Open a new session and do not tap call. After about 20 seconds the chat starts asking.
-Answer: `ABC123`, `Rahul Sharma`, Skip, then the reason box **"Family wedding"**, a date (pick one in the date box), **Afternoon**, the first flight, **Yes**.
+Answer: `ABC123`, `Rahul Sharma`, then the reason **"Family wedding"** in the bar, a date (pick it inside the date message and tap **Use date**), **Afternoon**, the first flight, **Yes**. When the email question appears, type one and tap **Save**, or tap **Skip**; the next question comes only after that.
 **Expect:** `completed`, with `changeReason.value.category` of `personal`.
 
 ### 12. Spoken reference vs typed one (expected: the typed one wins)
@@ -147,6 +147,12 @@ Start a session, answer the booking reference only, and close the tab. Wait **at
 
 From one network, open 11 new sessions within an hour.
 **Expect:** the 11th shows "Too many sessions from this network. Try again later."
+
+### 19. New chat
+
+Answer the booking-reference box, then tap the **pencil icon** in the header.
+**Expect:** a new session id in the URL and an empty thread with the welcome message. Open the old URL (with the old `sessionId`): your earlier answers are still there.
+During a call, tap the pencil icon. **Expect:** a box asks "End the call and start a new chat?". Cancel keeps the call.
 
 ## What to send back for a failure
 

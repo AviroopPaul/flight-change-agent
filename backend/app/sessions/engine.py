@@ -418,6 +418,10 @@ def submit_call_value(state: SessionState, field: str, raw: Any, now: datetime, 
         _advance(s, now, call_active, events)
         return _done(s, events, Err(_conflict_prompt(c)))
 
+    if f.status == "valid" and f.source == "chat" and _norm_for_compare(field, f.value) == _norm_for_compare(field, value):
+        if field == "newTravelDate":
+            return _done(s, events, Ok(f"Already saved from the chat: {spoken_date(value)}."))
+        return _done(s, events, Ok(f"Already saved from the chat: {f.value}."))
     changed = f.status == "valid" and f.value != value
     _set_valid(s, field, value, "call", now)
     if field in ("newTravelDate", "timeFlexibility") and changed:
@@ -425,8 +429,19 @@ def submit_call_value(state: SessionState, field: str, raw: Any, now: datetime, 
     events.append(_update(s, field, now))
     _advance(s, now, call_active, events)
     if field == "newTravelDate":
-        return _done(s, events, Ok(f"Saved {spoken_date(value)}. Read this date back to the caller exactly."))
-    return _done(s, events, Ok(value))
+        return _done(s, events, Ok(f"Saved {spoken_date(value)}. Read this date back to the caller exactly."
+                                   f"{_wait_hint(s)}"))
+    hint = _wait_hint(s)
+    return _done(s, events, Ok(f"{value}.{hint}" if hint else value))
+
+
+def _wait_hint(s: SessionState) -> str:
+    """While a chat card is open, the agent asks nothing new: one input at a time."""
+    card = s.open_card
+    if card is None or card.purpose != "collect":
+        return ""
+    return (f" A chat box is open for: {card.label}. Remind the caller to finish it in the chat, then wait. "
+            "Ask no new question until it is submitted.")
 
 
 def _conflict_prompt(c: Conflict) -> str:
@@ -705,10 +720,11 @@ def welcome(state: SessionState) -> Result:
     return _done(s, [_msg(WELCOME)])
 
 
-def call_started(state: SessionState) -> Result:
+def call_started(state: SessionState, now: datetime | None = None) -> Result:
     s = _start(state)
     if not s.locked:
         s.calls += 1
+    s.call_started_at = now
     return _done(s, [])
 
 
@@ -716,6 +732,7 @@ def call_ended(state: SessionState, seconds: int, now: datetime) -> Result:
     """The call is over: count its time and let the chat take over."""
     s = _start(state)
     s.call_seconds += max(0, int(seconds))
+    s.call_started_at = None
     events: list[Event] = []
     if not s.locked:
         s.requested = []

@@ -1,7 +1,6 @@
-import { isChoiceKind } from "../lib/inputs";
 import { Role } from "../protocol";
 import { ActionType, type Action, type ActionOf } from "./actions";
-import { CallState, CardStatus, ThreadItemKind, type ConversationState, type ThreadItem } from "./conversation";
+import { CallState, CardStatus, ThreadItemKind, type CardEntry, type ConversationState, type ThreadItem } from "./conversation";
 
 const DEFAULT_REJECT_MESSAGE = "Please check this value and try again.";
 
@@ -85,84 +84,46 @@ function ackAnswer(state: ConversationState, { key }: ActionOf<ActionType.ACK_AN
   return { ...state, items };
 }
 
-type Draft = ConversationState;
-
-function draft(state: ConversationState): Draft {
-  return { ...state, items: [...state.items], cards: { ...state.cards }, queue: [...state.queue] };
+function setCard(state: ConversationState, id: string, entry: CardEntry, items = state.items): ConversationState {
+  return { ...state, items, cards: { ...state.cards, [id]: entry } };
 }
 
-function openOnDraft(s: Draft, id: string, error: string | null, key: string): void {
-  const entry = s.cards[id];
-  if (entry.answerKey) s.items = s.items.filter((item) => item.key !== entry.answerKey);
-  let { promptKey } = entry;
-  if (!isChoiceKind(entry.spec.kind) && !promptKey) {
-    promptKey = `${key}:prompt`;
-    s.items.push({ kind: ThreadItemKind.PROMPT, key: promptKey, spec: entry.spec });
-  }
-  s.cards[id] = { ...entry, status: CardStatus.OPEN, answerKey: undefined, promptKey };
-  s.active = { id, key: `${key}:card`, error };
-}
-
-function openNextOnDraft(s: Draft, key: string): void {
-  const next = s.active ? undefined : s.queue.shift();
-  if (next) openOnDraft(s, next, null, key);
-}
-
-function requeueActiveOnDraft(s: Draft): void {
-  if (!s.active) return;
-  const { id } = s.active;
-  const entry = s.cards[id];
-  if (entry.promptKey) s.items = s.items.filter((item) => item.key !== entry.promptKey);
-  s.cards[id] = { ...entry, status: CardStatus.QUEUED, promptKey: undefined };
-  s.queue.unshift(id);
-  s.active = null;
-}
-
+/** A new question from the server: it shows at once, in the thread, wherever the conversation is. */
 function showCard(state: ConversationState, { spec, key }: ActionOf<ActionType.SHOW_CARD>): ConversationState {
   if (!spec.id || state.cards[spec.id]) return state;
-  const s = draft(state);
-  s.cards[spec.id] = { spec, status: CardStatus.QUEUED };
-  s.queue.push(spec.id);
-  openNextOnDraft(s, key);
-  return s;
+  const items: ThreadItem[] = [...state.items, { kind: ThreadItemKind.PROMPT, key: `${key}:prompt`, id: spec.id }];
+  return setCard(state, spec.id, { spec, status: CardStatus.OPEN, error: null, version: 0 }, items);
 }
 
-function rejectCard(state: ConversationState, { id, message, key }: ActionOf<ActionType.REJECT_CARD>): ConversationState {
-  const status = state.cards[id]?.status;
-  if (status !== CardStatus.OPEN && status !== CardStatus.SUBMITTED) return state;
-  const s = draft(state);
-  if (s.active?.id === id) s.active = null;
-  else requeueActiveOnDraft(s);
-  openOnDraft(s, id, message || DEFAULT_REJECT_MESSAGE, key);
-  return s;
+/** The server (or the send) refused the answer: drop the answer bubble and reopen the card at the end. */
+function rejectCard(state: ConversationState, { id, message }: ActionOf<ActionType.REJECT_CARD>): ConversationState {
+  const entry = state.cards[id];
+  if (entry?.status !== CardStatus.OPEN && entry?.status !== CardStatus.SUBMITTED) return state;
+  const prompt = state.items.find((item) => item.kind === ThreadItemKind.PROMPT && item.id === id);
+  const items = state.items.filter((item) => item.key !== entry.answerKey && item !== prompt);
+  if (prompt) items.push(prompt);
+  return setCard(
+    state,
+    id,
+    { ...entry, status: CardStatus.OPEN, error: message || DEFAULT_REJECT_MESSAGE, version: entry.version + 1, answerKey: undefined },
+    items,
+  );
 }
 
 function cancelCard(state: ConversationState, { id, reason, key }: ActionOf<ActionType.CANCEL_CARD>): ConversationState {
   const entry = state.cards[id];
-  if (!entry) return state;
-  if (entry.status === CardStatus.QUEUED || entry.status === CardStatus.SUBMITTED) {
-    const s = draft(state);
-    s.queue = s.queue.filter((queuedId) => queuedId !== id);
-    s.cards[id] = { ...entry, status: CardStatus.CANCELLED };
-    return s;
+  if (!entry || entry.status === CardStatus.CANCELLED) return state;
+  const items = [...state.items];
+  if (entry.status === CardStatus.OPEN) {
+    const suffix = reason ? ` (${reason})` : "";
+    items.push({ kind: ThreadItemKind.NOTE, key, text: `${entry.spec.label}: no longer needed${suffix}` });
   }
-  if (state.active?.id !== id) return state;
-  const s = draft(state);
-  s.cards[id] = { ...entry, status: CardStatus.CANCELLED };
-  s.active = null;
-  const suffix = reason ? ` (${reason})` : "";
-  s.items.push({ kind: ThreadItemKind.NOTE, key, text: `${entry.spec.label}: no longer needed${suffix}` });
-  openNextOnDraft(s, `${key}:next`);
-  return s;
+  return setCard(state, id, { ...entry, status: CardStatus.CANCELLED }, items);
 }
 
 function submitCard(state: ConversationState, { id, answer, key, time }: ActionOf<ActionType.SUBMIT_CARD>): ConversationState {
-  if (state.active?.id !== id) return state;
-  const s = draft(state);
-  const entry = s.cards[id];
-  s.cards[id] = { ...entry, status: CardStatus.SUBMITTED, last: answer, answerKey: key };
-  s.items.push({ kind: ThreadItemKind.ANSWER, key, spec: entry.spec, answer, acked: false, time });
-  s.active = null;
-  openNextOnDraft(s, `${key}:next`);
-  return s;
+  const entry = state.cards[id];
+  if (entry?.status !== CardStatus.OPEN) return state;
+  const items: ThreadItem[] = [...state.items, { kind: ThreadItemKind.ANSWER, key, spec: entry.spec, answer, acked: false, time }];
+  return setCard(state, id, { ...entry, status: CardStatus.SUBMITTED, error: null, last: answer, answerKey: key }, items);
 }

@@ -57,6 +57,7 @@ class SessionState(CamelModel):
     locked: bool = False
     calls: int = 0
     call_seconds: int = 0
+    call_started_at: datetime | None = None
     chat_messages: int = 0
     reason_category: str | None = None
     welcomed: bool = False

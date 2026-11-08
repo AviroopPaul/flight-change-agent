@@ -38,7 +38,8 @@ Browser (Vercel)
 - **Call to chat.** The agent calls backend tools (`/internal/sessions/{id}/*`). They run the same engine and push the result to the chat socket.
 - **The agent holds no state it cannot rebuild.** On start it reads `/context` (field status, open card, focus, last 20 transcript turns, no passenger names).
 - **During a call, the chat keeps going on its own.** The agent opens the first box (the booking reference); the other typed fields then follow in order, so a missed request cannot leave a field unasked.
-- **One input card at a time.** The engine keeps a queue. It opens the next card only when the current one closes, and cancels a stale card (`inputCancel`), for example when the date changes after flights were listed.
+- **One input at a time, on both channels.** The engine opens the next card only when the current one is answered (the optional e-ticket email too: type it or tap Skip), and cancels a stale card (`inputCancel`), for example when the date changes after flights were listed. While a card is open the call agent asks no new spoken question: each chat answer forwarded to the call names the next open card, so the agent prompts for it once and waits.
+- **Chat UI.** Every question is an agent message in the thread. Dates, choices, flights, the fare and the optional email are answered inside that message; the bottom bar is for typed answers only. Answers show as the user's messages. The final record is a summary card (trip, payment, request, with call/chat source tags) and keeps a "View JSON" toggle.
 - **Code layout.** The backend is split by domain (`catalog`, `sessions`, `chat`, `calls`, `records`, `telemetry`, `jobs`). Only a domain's `repository.py` has SQL for its tables.
 
 ## How the record is built and sanitized
@@ -86,9 +87,9 @@ The JSON Schema of the record is in [docs/record.schema.json](docs/record.schema
 
 - **Voice:** LiveKit Cloud (free Build plan) and LiveKit Agents in Python. LiveKit handles WebRTC, barge-in, turn detection and call-drop reconnects, which saved the most work.
 - **STT / TTS:** Deepgram Nova-3 streaming and Aura-2. Fast, cheap, good on Indian English.
-- **LLM:** Gemini 3.5 Flash-Lite (minimal thinking), with 3.5 Flash as a fallback. The cheapest Flash model that was available, and reliable at tool calls. Groq's free tier rate-limited live calls.
+- **LLM:** Gemini 3.5 Flash-Lite on Vertex AI (`asia-south1`, minimal thinking), with 3.1 Flash-Lite as fallback. 3.1 is about $0.002 cheaper per session, but Vertex serves it only from `global`, and live tool-chain turns took 7 to 9 s on it, against about 2 s. Auth: ADC locally; on LiveKit Cloud, a key for a service account with only the Vertex AI User role.
 - **Backend:** FastAPI on Cloud Run (one instance, scales to zero) with Neon Postgres. Web: the starter UI on Vercel.
-- **Cost:** about **$0.08 per completed session** (estimate for a 3-minute call: STT $0.023, TTS $0.030, LLM $0.023, hosting $0). Measured numbers: see below.
+- **Cost:** about **$0.06 per completed session** (estimate for a 3-minute call: STT $0.023, TTS $0.030, LLM $0.009, hosting $0). Measured numbers: see below.
 
 ## Cost and latency
 
@@ -133,7 +134,7 @@ cd backend && uv run python ../scripts/latency_report.py --database-url "$NEON_D
 
 ## What I trust least
 
-- **LLM quotas.** The first live test on Groq's free tier hit its 8,000 tokens per minute limit within a few turns, and the fallback model then got a date wrong. The agent now runs on Gemini; its key must be on a billed project, or the free daily quota runs out after a few sessions.
+- **LLM quotas.** The first live test on Groq's free tier hit its 8,000 tokens per minute limit within a few turns, and the fallback model then got a date wrong. The agent now runs Gemini on Vertex AI in a billed project, so free-tier quotas do not apply.
 - **LLM tool discipline.** The prompt asks the model to save focus, read dates back and request one chat card at a time. The backend enforces the rules that matter (validation, one card, no names), but the conversation quality still depends on the model following the prompt.
 - **The in-process chat hub.** It is correct only with one backend instance.
 
@@ -152,7 +153,7 @@ cd backend && uv run python ../scripts/latency_report.py --database-url "$NEON_D
 
 ## Run locally
 
-Needs Python 3.12 with `uv`, Node 20+, Postgres 16 on port 5433 (`docker compose up -d db`, or a local install with db `flight`, user/pass `dev`/`dev`), and keys for LiveKit Cloud, Deepgram and Groq in your environment.
+Needs Python 3.12 with `uv`, Node 20+, Postgres 16 on port 5433 (`docker compose up -d db`, or a local install with db `flight`, user/pass `dev`/`dev`), keys for LiveKit Cloud, Deepgram and Groq in your environment, and `gcloud auth application-default login` for Gemini on Vertex AI.
 
 ```bash
 cd backend && uv sync && SERVICE_TOKEN=dev-token uv run uvicorn app.main:app --port 8080
@@ -185,7 +186,7 @@ cd agent && uv run pytest -q
 
 - **Backend:** `gcloud run deploy flight-backend --source=. --region=asia-south1 --max-instances=1 --timeout=3600 --allow-unauthenticated` from `backend/`, with secrets from Secret Manager.
 - **Agent:** `lk agent create` / `lk agent deploy` from `agent/`, with `GROQ_API_KEY`, `DEEPGRAM_API_KEY`, `BACKEND_URL`, `SERVICE_TOKEN` as agent secrets.
-- **Web:** `vercel --prod` from `web/` with `VITE_SERVER_URL` set to the backend URL. Then set the backend's `ALLOWED_ORIGINS` to the Vercel URL.
+- **Web:** `vercel --prod` from `web/`. `VITE_SERVER_URL` (the backend URL) is a Vercel production env var. Then set the backend's `ALLOWED_ORIGINS` to the Vercel URL.
 - **Sweep:** a Cloud Scheduler job every 5 minutes: `POST /internal/sweep` with the service token.
 
 ## Later (bonus list)

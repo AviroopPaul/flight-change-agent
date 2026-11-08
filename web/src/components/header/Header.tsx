@@ -2,6 +2,7 @@ import { isInCall, type CallStatus } from "../../state/conversation";
 import { AvatarIcon, PhoneIcon } from "../icons";
 import { CallTimer } from "./CallTimer";
 import { MicMeter } from "./MicMeter";
+import { NewChatButton } from "./NewChatButton";
 import { StopButton } from "./StopButton";
 import { Banner } from "../thread/Banner";
 
@@ -37,7 +38,10 @@ export function Header({ call, notice, onCall, onStop, stopDisabled }: Props) {
           <PhoneIcon />
         </button>
         <MicMeter />
-        <StopButton disabled={stopDisabled} onStop={onStop} />
+        <div className="header-actions">
+          <NewChatButton inCall={inCall} />
+          <StopButton disabled={stopDisabled} onStop={onStop} />
+        </div>
       </header>
       <Banner call={call} />
       {notice && <p className="notice" role="status">{notice}</p>}

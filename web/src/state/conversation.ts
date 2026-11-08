@@ -1,4 +1,4 @@
-import type { FinalRecord, InputRequest, InputValue, Role } from "../protocol";
+import { InputKind, type FinalRecord, type InputRequest, type InputValue, type Role } from "../protocol";
 
 export enum CallState {
   IDLE = "idle",
@@ -38,7 +38,7 @@ export type ThreadItem =
   | { kind: ThreadItemKind.NOTE; key: string; text: string }
   | { kind: ThreadItemKind.TRANSCRIPT; key: string; role: Role; text: string; final: boolean; time: string }
   | { kind: ThreadItemKind.MESSAGE; key: string; id?: string; role: Role; text: string; time: string }
-  | { kind: ThreadItemKind.PROMPT; key: string; spec: InputRequest }
+  | { kind: ThreadItemKind.PROMPT; key: string; id: string }
   | { kind: ThreadItemKind.ANSWER; key: string; spec: InputRequest; answer: Answer; acked: boolean; time: string }
   | { kind: ThreadItemKind.RECORD; key: string; record: FinalRecord };
 
@@ -52,9 +52,11 @@ export enum CardStatus {
 export interface CardEntry {
   spec: InputRequest;
   status: CardStatus;
+  error: string | null;
+  /** Bumped when the card reopens, so its form remounts with the last answer and the error. */
+  version: number;
   last?: Answer;
   answerKey?: string;
-  promptKey?: string;
 }
 
 export interface OpenCard {
@@ -70,8 +72,6 @@ export interface ConversationState {
   items: ThreadItem[];
   transcripts: Record<string, string>;
   cards: Record<string, CardEntry>;
-  queue: string[];
-  active: { id: string; key: string; error: string | null } | null;
 }
 
 export function initialState(call: Partial<CallStatus> = {}, notice: string | null = null): ConversationState {
@@ -81,13 +81,25 @@ export function initialState(call: Partial<CallStatus> = {}, notice: string | nu
     items: [],
     transcripts: {},
     cards: {},
-    queue: [],
-    active: null,
   };
 }
 
-export function selectOpenCard({ active, cards }: Pick<ConversationState, "active" | "cards">): OpenCard | null {
-  if (!active) return null;
-  const entry = cards[active.id];
-  return { key: active.key, error: active.error, spec: entry.spec, previous: entry.last };
+const BAR_KINDS: ReadonlySet<InputKind> = new Set([
+  InputKind.TEXT, InputKind.EMAIL, InputKind.PHONE, InputKind.NUMBER, InputKind.FILE,
+]);
+
+/**
+ * Required typed answers use the text bar at the bottom. Everything else (dates, choices, flights,
+ * the fare, optional questions) is answered inside its card in the thread.
+ */
+export const usesTextBar = (spec: InputRequest): boolean => spec.required !== false && BAR_KINDS.has(spec.kind);
+
+export function toOpenCard(id: string, entry: CardEntry): OpenCard {
+  return { key: `${id}:${entry.version}`, spec: entry.spec, error: entry.error, previous: entry.last };
+}
+
+/** The open card that the text bar answers, if any (the server opens at most one required card). */
+export function selectBarCard(cards: Record<string, CardEntry>): OpenCard | null {
+  const found = Object.entries(cards).find(([, e]) => e.status === CardStatus.OPEN && usesTextBar(e.spec));
+  return found ? toOpenCard(found[0], found[1]) : null;
 }
