@@ -17,7 +17,7 @@ def client():
 async def test_record_answer_returns_backend_error_text():
     respx.post(f"{BASE}/internal/sessions/{SID}/fields").mock(return_value=httpx.Response(
         200, json={"ok": False, "error": "Please give the date as a day, month and year."}))
-    out = await ToolLogic(client()).record_answer("newTravelDate", "Dec 13th")
+    out = await ToolLogic(client()).record_answer("newTravelDate", "Dec 13th", said="December 13th")
     assert out == "Please give the date as a day, month and year."
 
 
@@ -115,3 +115,29 @@ async def test_end_call_allowed_when_complete_or_caller_leaves():
 async def test_end_call_allowed_when_backend_is_down():
     respx.get(f"{BASE}/internal/sessions/{SID}/context").mock(side_effect=httpx.ConnectError("down"))
     assert await ToolLogic(client()).end_call_blocker(caller_is_leaving=False) is None
+
+
+@respx.mock
+async def test_date_without_date_words_is_not_saved():
+    """Live run s_81c7f78fa7: the caller said "So I'll demonstrate one" and the agent saved 20 November."""
+    route = respx.post(f"{BASE}/internal/sessions/{SID}/fields").mock(return_value=httpx.Response(200, json={"ok": True}))
+    for said in ("So I'll demonstrate one", "", "yes please"):
+        out = await ToolLogic(client()).record_answer("newTravelDate", "2026-11-20", said=said)
+        assert "did not say a date" in out
+    assert not route.called
+
+
+@respx.mock
+async def test_date_with_date_words_is_saved():
+    route = respx.post(f"{BASE}/internal/sessions/{SID}/fields").mock(return_value=httpx.Response(
+        200, json={"ok": True, "result": "Saved."}))
+    for said in ("November twenty fifth", "the 25th", "next Friday", "tomorrow", "maybe on the first of December"):
+        assert await ToolLogic(client()).record_answer("newTravelDate", "2026-11-25", said=said) == "Saved."
+    assert route.call_count == 5
+
+
+@respx.mock
+async def test_other_fields_need_no_quote():
+    respx.post(f"{BASE}/internal/sessions/{SID}/fields").mock(return_value=httpx.Response(
+        200, json={"ok": True, "result": "evening"}))
+    assert await ToolLogic(client()).record_answer("timeFlexibility", "evening") == "evening"

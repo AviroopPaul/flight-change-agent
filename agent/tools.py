@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from typing import Literal
 
 from livekit.agents import Agent, RunContext, function_tool, get_job_context
@@ -14,6 +15,18 @@ CallField = Literal["changeReason", "newTravelDate", "timeFlexibility"]
 ChatField = Literal["pnr", "passengerNames", "contactEmail", "selectedFlight", "fareAcceptance"]
 AnyField = Literal["changeReason", "newTravelDate", "timeFlexibility", "pnr", "passengerNames",
                    "contactEmail", "selectedFlight", "fareAcceptance"]
+
+
+# Words that show the caller actually named a day. Without one, a "date" is the model's guess.
+DATE_WORDS = re.compile(
+    r"\d|\b(january|february|march|april|may|june|july|august|september|october|november|december"
+    r"|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|tonight|next|coming|week|weekend"
+    r"|month|fortnight|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth"
+    r"|thirteenth|fourteenth|fifteenth|sixteenth|seventeenth|eighteenth|nineteenth|twentieth|thirtieth)\b",
+    re.IGNORECASE,
+)
+NO_DATE_SAID = ("Not saved: the caller did not say a date. Do not guess one. Ask them for the new travel date "
+                "again, or to pick it on the calendar in the chat.")
 
 
 def speak(resp: dict) -> str:
@@ -32,7 +45,9 @@ class ToolLogic:
     def __init__(self, client: BackendClient) -> None:
         self.client = client
 
-    async def record_answer(self, field: str, value: str) -> str:
+    async def record_answer(self, field: str, value: str, said: str = "") -> str:
+        if field == "newTravelDate" and not DATE_WORDS.search(said or ""):
+            return NO_DATE_SAID
         return speak(await self.client.submit_field(field, value))
 
     async def note_spoken_value(self, field: str, value: str) -> str:
@@ -99,9 +114,10 @@ class FlightAgent(Agent):
             yield chunk
 
     @function_tool()
-    async def record_answer(self, context: RunContext, field: CallField, value: str) -> str:
-        """Save a spoken answer. newTravelDate must be YYYY-MM-DD. timeFlexibility is morning, afternoon, evening or any."""
-        return await self.logic.record_answer(field, value)
+    async def record_answer(self, context: RunContext, field: CallField, value: str, said: str = "") -> str:
+        """Save a spoken answer. newTravelDate must be YYYY-MM-DD. timeFlexibility is morning, afternoon, evening or any.
+        said: the caller's exact words for this answer. Required for newTravelDate."""
+        return await self.logic.record_answer(field, value, said)
 
     @function_tool()
     async def note_spoken_value(self, context: RunContext, field: ChatField, value: str) -> str:

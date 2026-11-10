@@ -119,3 +119,8 @@ def test_month_calendar_lists_every_day_with_weekday():
 def test_month_calendar_rejects_bad_input():
     from prompts import month_calendar
     assert month_calendar("next month") == "Give the month as YYYY-MM, for example 2026-12."
+
+
+def test_prompt_says_how_to_change_filled_answers():
+    p = system_prompt(CTX)
+    assert "the email or the booking reference, call send_chat_request for that field" in p and "tap No on the fare card" in p

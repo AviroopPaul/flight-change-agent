@@ -34,6 +34,12 @@ TYPED_WINS = "typed value preferred over spoken"
 WELCOME = "Hi! I can help you change your flight. Tap the call button above to start, or answer the questions here."
 
 FLIGHT_FIELDS = {"selectedFlight", "fareAcceptance"}
+# Filled answers the caller may change from the chat, and the open boxes that may be paused to do it.
+REOPEN_PAUSES = {
+    "newTravelDate": FLIGHT_FIELDS,
+    "contactEmail": FLIGHT_FIELDS,
+    "pnr": FLIGHT_FIELDS | {"passengerNames"},
+}
 CALL_CHAT_ORDER = [*CHAT_ORDER[:3], "newTravelDate", *CHAT_ORDER[3:]]
 REFUND_SKIPS = {"selectedFlight", "fareAcceptance", "contactEmail", "newTravelDate", "timeFlexibility"}
 FLEX_LABELS = {
@@ -459,10 +465,12 @@ def request_chat_input(state: SessionState, field: str, now: datetime, call_acti
         return _locked(state)
     if field not in ALL_FIELDS:
         return Result(state, [], Err(UNKNOWN))
-    if state.fields[field].status == "valid":
-        return Result(state, [], Err(f"The {FIELD_LABELS[field]} is already filled in."))
     if not _applies(state, field):
         return Result(state, [], Err(f"The {FIELD_LABELS[field]} is not needed for a refund."))
+    if state.fields[field].status == "valid":
+        if field in REOPEN_PAUSES:
+            return _reopen(state, field, now)
+        return Result(state, [], Err(f"The {FIELD_LABELS[field]} is already filled in."))
     s = _start(state)
     events: list[Event] = []
     if field not in s.requested:
@@ -475,6 +483,23 @@ def request_chat_input(state: SessionState, field: str, now: datetime, call_acti
     else:
         reply = Ok("Queued. It will show in the chat after the current question.")
     return _done(s, events, reply)
+
+
+def _reopen(state: SessionState, field: str, now: datetime) -> Result:
+    """The caller wants to change a filled answer (date, email or booking reference). The saved value stays
+    until a new one is given. A box that depends on it is paused first and comes back if it still applies."""
+    s = _start(state)
+    events: list[Event] = []
+    card = s.open_card
+    if card is not None and card.field == field:
+        return _done(s, events, Ok("Sent to the chat."))
+    if card is not None and card.field not in REOPEN_PAUSES[field]:
+        return _done(s, events, Err(f"Another chat box is open: {card.label}. Wait until it is answered."))
+    _cancel_open(s, events, f"Paused while the {FIELD_LABELS[field]} is changed.", only=REOPEN_PAUSES[field])
+    s.open_card = _build_card(s, field, now, events)
+    events.append(Event("inputRequest", _card_payload(s.open_card)))
+    _track_focus(s)
+    return _done(s, events, Ok(f"Sent to the chat. The saved {FIELD_LABELS[field]} stays until the caller gives a new one."))
 
 
 def answer_card(state: SessionState, request_id: str, value: Any, now: datetime, call_active: bool) -> Result:
