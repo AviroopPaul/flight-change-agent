@@ -29,8 +29,8 @@ export function ChatPanel({ serverLabel, sessionId, open, onClose, items, cards,
       inert={!open}
       className={`fixed inset-y-0 right-0 z-40 flex w-full transition-transform duration-300 ease-out sm:w-[440px] lg:p-3 ${open ? "translate-x-0" : "translate-x-full"}`}
     >
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden border-l border-white/10 bg-[oklch(0.165_0.022_264/0.97)] shadow-[0_0_80px_-20px_rgb(0_0_0/0.9)] backdrop-blur-xl lg:rounded-3xl lg:border">
-        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+      <section className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-[2rem]">
+        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-medium">Conversation</h2>
             <p className="truncate font-mono text-[10.5px] text-muted-foreground" title={serverLabel}>
@@ -41,7 +41,7 @@ export function ChatPanel({ serverLabel, sessionId, open, onClose, items, cards,
             type="button"
             onClick={onClose}
             aria-label="Close conversation"
-            className="grid size-9 place-items-center rounded-xl text-muted-foreground ring-1 ring-white/10 transition-colors outline-none hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="well grid size-9 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="size-4" />
           </button>

@@ -1,5 +1,6 @@
 import {
   CalendarDays,
+  Braces,
   CircleAlert,
   CircleCheckBig,
   CircleX,
@@ -98,7 +99,7 @@ export function RecordCard({ record, onClose, className }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close final record"
-            className="order-last -mt-1 -mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-white/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="well order-last -mt-1 -mr-1 grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="size-4" />
           </button>
@@ -146,7 +147,7 @@ export function RecordCard({ record, onClose, className }: Props) {
       )}
       {footer && <p className="border-t border-white/[0.06] px-4 py-2 text-xs text-muted-foreground">{footer}</p>}
       <details className="group px-4 pt-1 pb-3">
-        <summary className="cursor-pointer text-[12.5px] text-glow/90 hover:text-glow">View JSON</summary>
+        <summary className="well inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] text-foreground/85 hover:text-foreground [&::-webkit-details-marker]:hidden"><Braces className="size-3.5 text-glow-2" /> View JSON</summary>
         <pre className="thin-scroll mt-2 max-h-64 overflow-auto rounded-lg bg-black/30 p-3 font-mono text-[11px] text-foreground/85 ring-1 ring-white/[0.06]">
           {JSON.stringify(record, null, 2)}
         </pre>

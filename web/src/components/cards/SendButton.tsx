@@ -6,9 +6,9 @@ export function SendButton({ disabled = false }: { disabled?: boolean }) {
       type="submit"
       aria-label="Send"
       disabled={disabled}
-      className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground transition-all outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-ring disabled:bg-white/10 disabled:text-muted-foreground disabled:shadow-none"
+      className="btn-glow grid size-10 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-none disabled:bg-white/10 disabled:text-muted-foreground disabled:shadow-none disabled:filter-none"
     >
-      <ArrowUp className="size-5" />
+      <ArrowUp className="size-5" strokeWidth={2.5} />
     </button>
   );
 }

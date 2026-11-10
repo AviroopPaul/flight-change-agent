@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AgentState } from "@livekit/components-react";
-import { Headphones, Loader2, OctagonX, Phone, PhoneOff, Plane } from "lucide-react";
+import { Headphones, Loader2, OctagonX, Phone, PhoneCall, PhoneOff, Plane } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CallTimer } from "./CallTimer";
 import type { MicDevices } from "@/hooks/useMicDevices";
@@ -34,11 +34,11 @@ interface Props {
 }
 
 const STATE_TONE: Partial<Record<AgentState, string>> = {
-  listening: "bg-glow",
-  speaking: "bg-glow-2",
-  thinking: "bg-warning",
-  connecting: "bg-warning",
-  initializing: "bg-warning",
+  listening: "bg-glow-2 shadow-[0_0_8px_var(--glow)]",
+  speaking: "bg-glow shadow-[0_0_8px_var(--glow)]",
+  thinking: "bg-white/70",
+  connecting: "bg-white/70",
+  initializing: "bg-white/70",
   failed: "bg-destructive",
 };
 
@@ -59,8 +59,8 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
     >
       <div className="flex w-full items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.06] ring-1 ring-white/10">
-            <Plane className="size-4 text-glow" />
+          <span className="glass grid size-9 shrink-0 place-items-center rounded-[0.8rem]">
+            <Plane className="size-[17px] text-glow-2" />
           </span>
           <div className="min-w-0 leading-tight">
             <p className="text-sm font-medium tracking-tight">Flight change</p>
@@ -73,7 +73,7 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
       <div
         role="status"
         aria-live="polite"
-        className="glass mt-3 flex min-w-0 items-center gap-2 rounded-full px-3 py-1 font-mono text-[11px] tracking-[0.14em] text-muted-foreground uppercase lg:mt-0"
+        className="glass mt-3 flex min-w-0 items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-[11px] tracking-[0.14em] text-foreground/75 uppercase lg:mt-0"
       >
         <span className={cn("size-1.5 shrink-0 rounded-full", STATE_TONE[orb] ?? "bg-muted-foreground", inCall && "animate-pulse")} />
         <span className="truncate">{statusText}</span>
@@ -91,7 +91,7 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
         <Caption inCall={inCall} connecting={call.state === CallState.CONNECTING} caption={caption} callBack={callBack} />
       </div>
 
-      <div className="glass flex items-center gap-2 rounded-full p-1.5 shadow-[0_20px_60px_-20px_rgb(0_0_0/0.7)]">
+      <div className="glass flex items-center gap-2 rounded-full p-2">
         <MicControl inCall={live} muted={voice.muted} level={micLevel} mics={mics} onMute={onMute} onPick={onPickMic} />
         <CallButton call={call} onCall={onCall} callBack={callBack} />
         <Tooltip>
@@ -128,13 +128,13 @@ function CallButton({ call, onCall, callBack }: { call: CallStatus; onCall: () =
       disabled={call.disabled}
       aria-label={inCall ? "End call" : callBack ? "Call me back" : "Start call"}
       className={cn(
-        "flex h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
+        "flex h-12 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
         inCall
-          ? "min-w-12 bg-destructive text-white hover:brightness-110"
-          : "min-w-36 bg-primary text-primary-foreground hover:brightness-110",
+          ? "btn-danger min-w-12"
+          : "btn-glow min-w-40 font-semibold",
       )}
     >
-      {connecting ? <Loader2 className="size-5 animate-spin" /> : inCall ? <PhoneOff className="size-5" /> : <Phone className="size-4" />}
+      {connecting ? <Loader2 className="size-5 animate-spin" /> : inCall ? <PhoneOff className="size-5" /> : callBack ? <PhoneCall className="size-[18px]" strokeWidth={2.3} /> : <Phone className="size-[18px]" strokeWidth={2.3} />}
       <span className={cn(inCall && "sr-only sm:not-sr-only")}>{inCall ? (connecting ? "Cancel" : "End") : callBack ? "Call me back" : "Start call"}</span>
     </button>
   );
@@ -165,12 +165,12 @@ function Caption({ inCall, connecting, caption, callBack }: { inCall: boolean; c
   const you = caption.role === Role.USER;
   return (
     <div className="flex min-h-10 max-w-xl flex-col items-center gap-1 text-center">
-      <span className={cn("font-mono text-[10px] tracking-[0.18em] uppercase", you ? "text-muted-foreground" : "text-glow/80")}>
+      <span className={cn("font-mono text-[10px] tracking-[0.18em] uppercase", you ? "text-muted-foreground" : "text-glow")}>
         {you ? "You" : "Agent"}
       </span>
       <p
         className={cn(
-          "line-clamp-2 text-base leading-snug font-light text-balance lg:line-clamp-3 lg:text-2xl",
+          "line-clamp-2 text-base leading-snug font-light text-balance lg:line-clamp-3 lg:text-[1.375rem]",
           caption.final ? "text-foreground/90" : "shimmer",
         )}
       >

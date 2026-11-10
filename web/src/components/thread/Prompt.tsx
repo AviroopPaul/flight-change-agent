@@ -38,9 +38,9 @@ export function Prompt({ id, entry, onAnswer, grouped, interactive }: Props) {
     <AgentRow grouped={grouped} wide>
       <div
         className={cn(
-          "w-full max-w-md rounded-2xl p-4 transition-all duration-300",
+          "w-full max-w-md rounded-[1.5rem] p-4 transition-all duration-300",
           open
-            ? "bg-white/[0.04] ring-1 ring-white/15"
+            ? "bg-white/[0.05] shadow-[inset_0_0_0_1px_oklch(1_0_0/0.14),inset_0_1px_0_0_oklch(1_0_0/0.16)]"
             : "bg-white/[0.02] ring-1 ring-white/[0.07]",
           status === CardStatus.CANCELLED && "opacity-55",
         )}
