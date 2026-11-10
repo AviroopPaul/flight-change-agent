@@ -30,14 +30,15 @@ RULES = """You are a friendly airline agent on a phone-style voice call. You hel
 You speak through text to speech. Keep every reply to one or two short sentences. Never use lists, markdown, emoji or dashes.
 
 What you collect
-- By voice: the reason for the change (changeReason), the new travel date (newTravelDate) and the time of day (timeFlexibility: morning, afternoon, evening or any).
+- By voice: the reason for the change (changeReason), the new travel date (newTravelDate, which the caller can also pick on a calendar in the chat) and the time of day (timeFlexibility: morning, afternoon, evening or any).
 - In the chat box: the booking reference (pnr), the passenger names (passengerNames), an optional email (contactEmail), the new flight (selectedFlight) and the fare acceptance (fareAcceptance). Letters, digits and names are hard to hear, so these are typed.
 
 How to work
 - Right after you hear the reason, save it with record_answer and call send_chat_request for pnr. Tell the caller you sent a box to the chat for their booking reference.
 - Say a box was sent only when send_chat_request answers "Sent to the chat." If it says the box is queued, do not mention it yet.
 - When a turn needs several tools (for example saving an answer and sending a chat box), call them together in one step.
-- Save every spoken answer at once with record_answer. For dates, look the day up in the calendar below and send YYYY-MM-DD. Never work out a weekday yourself. After saving a date, read back the exact words the tool returns.
+- Save every spoken answer at once with record_answer. For dates, send YYYY-MM-DD. Look near days up in the calendar below. For a day named by weekday further out (like the first Friday of December), call month_calendar first. The calendar below is only a lookup, not a limit: any future date can be booked and record_answer checks it, so never refuse a date yourself. Never work out a weekday yourself. After saving a date, read back the exact words the tool returns.
+- When a note says the chat shows a calendar for the new travel date, ask for the date: the caller can say it or pick it on the calendar. If they say it, save it with record_answer.
 - Save the reason only when the caller actually gives one, not a greeting. If they explain it better later, save it again.
 - If a tool returns an error sentence, say it to the caller in your own short words and ask again.
 - One step at a time. Ask no new spoken question while a chat box is open. Tell the caller once what to do in the chat (type it, pick one, or tap Skip on the optional email), then wait quietly until a note says it was submitted. If the caller gives a spoken answer anyway, save it, then remind them about the box.
@@ -79,6 +80,19 @@ def calendar(today_iso: str, days: int = 15) -> str:
     except (TypeError, ValueError):
         return ""
     return "; ".join(f"{d:%a %d %b} = {d.isoformat()}" for d in (start + timedelta(n) for n in range(days)))
+
+
+def month_calendar(month: str) -> str:
+    """Every day of one month with its weekday, for dates beyond the two weeks listed in the prompt."""
+    try:
+        first = date.fromisoformat(f"{str(month).strip()[:7]}-01")
+    except ValueError:
+        return "Give the month as YYYY-MM, for example 2026-12."
+    days, d = [], first
+    while d.month == first.month:
+        days.append(f"{d:%a} {d.day} {d:%b} = {d.isoformat()}")
+        d += timedelta(days=1)
+    return f"{first:%B %Y}: " + "; ".join(days) + "."
 
 
 def system_prompt(ctx: dict) -> str:
@@ -126,6 +140,9 @@ def event_note(kind: str, payload: dict) -> str | None:
         card = payload.get("openCard")
         if not card:
             return f"{head} No chat box is open now. Continue with the next spoken question."
+        if card.get("field") == "newTravelDate":
+            return (f"{head} The chat now shows a calendar for the new travel date. In one short sentence, ask the "
+                    "caller for their new travel date: they can say it or pick it on the calendar.")
         skip = " or tap Skip" if card.get("optional") else ""
         return (f"{head} The chat now shows a box for: {card.get('label')}. In one short sentence, ask the caller "
                 f"to fill it in{skip}. Ask nothing else until it is submitted.")

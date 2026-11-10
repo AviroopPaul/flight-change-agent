@@ -67,7 +67,7 @@ flowchart LR
 | Field | Channel | Required | Validation and normalization |
 |---|---|---|---|
 | `changeReason` | call | yes | 3 to 500 characters, not a bare greeting ("hey", "okay"). Tagged with a category: `schedule`, `personal`, `medical`, `missedFlight` or `other`. |
-| `newTravelDate` | call | yes | ISO date only. The agent looks dates up in a 2-week calendar in its prompt and reads back the backend's wording ("Friday 13 November 2026"). Not past, at most 330 days ahead, not the current flight's day. |
+| `newTravelDate` | call or chat | yes | ISO date only. Said on the call or picked on the calendar card, which opens after the email (during a call too; a spoken date closes it). The agent has a 2-week lookup in its prompt and a `month_calendar` tool for later weekdays, and reads back the backend's wording ("Friday 13 November 2026"). Not past, not the current flight's day. No upper limit. |
 | `timeFlexibility` | call | yes | `morning`, `afternoon`, `evening` or `any` ("any time" and "flexible" map to `any`). |
 | `pnr` | chat | yes | Uppercased, spaces removed, 6 letters or digits. Must exist, be `confirmed`, not flown, and depart in more than 3 hours. |
 | `passengerNames` | chat | yes | One card per passenger. Uppercased; punctuation and titles (MR, MRS, DR...) removed. Each must match a different name on the booking. Errors never show the real names. |

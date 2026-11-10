@@ -70,7 +70,6 @@ def test_name_duplicate_rejected():
     "raw,dep,msg",
     [
         ("2026-11-06", None, "That date has passed. Please pick a future date."),
-        ("2027-10-04", None, "We can only book up to 330 days ahead."),
         ("2026-11-12", "ABC123", "That's the same day as your current flight. Please pick a different date."),
         ("13/12", None, "Please give the date as a day, month and year."),
         ("Dec 13th", None, "Please give the date as a day, month and year."),
@@ -85,6 +84,7 @@ def test_date_rules(raw, dep, msg):
 def test_date_ok():
     assert normalize_date("2026-12-13", NOW, BOOKINGS["ABC123"].departure) == Ok(date(2026, 12, 13))
     assert normalize_date("2027-10-03", NOW, None) == Ok(date(2027, 10, 3))
+    assert normalize_date("2028-06-15", NOW, None) == Ok(date(2028, 6, 15))  # no upper limit
 
 
 def test_flex_aliases():

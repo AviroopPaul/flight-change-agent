@@ -278,7 +278,41 @@ def test_chat_fields_continue_in_order_during_call():
     r = answer_card(r.state, r.state.open_card.id, "Rahul Sharma", NOW, True)
     assert r.state.open_card.field == "contactEmail"
     r = answer_card(r.state, r.state.open_card.id, None, NOW, True)
-    assert r.state.open_card is None  # flights wait for the spoken date and time of day
+    assert r.state.open_card.field == "newTravelDate" and r.state.open_card.kind == "date"
+
+
+def date_calendar_open_in_call():
+    r = request_chat_input(new_state("s1"), "pnr", NOW, True)
+    for value in ("ABC123", "Rahul Sharma", None):
+        r = answer_card(r.state, r.state.open_card.id, value, NOW, True)
+    assert r.state.open_card.field == "newTravelDate"
+    return r
+
+
+def test_date_picked_on_the_calendar_during_call_then_time_is_spoken():
+    r = date_calendar_open_in_call()
+    r = answer_card(r.state, r.state.open_card.id, "2026-12-20", NOW, True)
+    assert r.state.fields["newTravelDate"].value == "2026-12-20"
+    assert r.state.open_card is None  # flights wait for the spoken time of day
+
+
+def test_spoken_date_closes_the_open_calendar():
+    r = date_calendar_open_in_call()
+    card_id = r.state.open_card.id
+    r = submit_call_value(r.state, "newTravelDate", "2026-12-20", NOW, True)
+    assert r.reply.ok and "Sunday 20 December 2026" in r.reply.value
+    assert "chat box is open" not in r.reply.value
+    assert {"requestId": card_id, "reason": "Answered on the call."} in [e.payload for e in r.events if e.kind == "inputCancel"]
+    assert r.state.open_card is None
+    assert r.state.fields["newTravelDate"].source == "call"
+
+
+def test_spoken_date_known_before_the_calendar_skips_it():
+    r = submit_call_value(new_state("s1"), "newTravelDate", "2026-12-20", NOW, True)
+    r = request_chat_input(r.state, "pnr", NOW, True)
+    for value in ("ABC123", "Rahul Sharma", None):
+        r = answer_card(r.state, r.state.open_card.id, value, NOW, True)
+    assert r.state.open_card is None
 
 
 def test_no_chat_card_during_call_before_agent_asks():
