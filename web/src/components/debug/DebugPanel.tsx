@@ -58,7 +58,7 @@ export function DebugPanel({ open, onClose, http, sessionId }: Props) {
       role="dialog"
       aria-modal="true"
       aria-label="Session timeline"
-      className="fixed inset-0 z-[60] flex flex-col bg-[oklch(0.15_0.02_264/0.98)] backdrop-blur-xl"
+      className="fixed inset-0 z-[60] flex flex-col bg-[oklch(0.07_0.004_255/0.94)] backdrop-blur-2xl backdrop-saturate-150"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 lg:px-8">
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/[0.06] ring-1 ring-white/10">

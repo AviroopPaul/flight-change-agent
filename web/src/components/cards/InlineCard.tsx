@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
+import { ArrowUp, CalendarCheck, Check, Forward, Plane, X } from "lucide-react";
 import { choiceAnswer, multiSelectAnswer, singleChoices, SKIPPED_DISPLAY, textAnswer } from "../../lib/answers";
 import { fareLines, optionParts } from "../../lib/cardView";
 import { INPUT_TYPES, inputId, labelId } from "../../lib/inputs";
@@ -8,13 +9,14 @@ import { cn } from "@/lib/utils";
 import { ErrorLine } from "./ErrorLine";
 
 const OPTION =
-  "group flex w-full items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-3.5 py-3 text-left ring-1 ring-white/10 transition-all outline-none hover:bg-white/[0.06] hover:ring-white/25 focus-visible:ring-2 focus-visible:ring-ring";
+  "well group flex w-full items-center justify-between gap-3 rounded-[1.15rem] px-4 py-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring";
 const FIELD =
-  "h-10 min-w-0 flex-1 rounded-xl bg-white/[0.04] px-3 text-[15px] ring-1 ring-white/12 outline-none placeholder:text-muted-foreground focus:ring-white/35 [color-scheme:dark]";
+  "well h-11 min-w-0 flex-1 rounded-full px-4 text-[15px] outline-none placeholder:text-muted-foreground [color-scheme:dark]";
 const ACT =
-  "inline-flex min-h-10 flex-1 items-center justify-center rounded-xl px-4 text-sm font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40";
-const PRIMARY = cn(ACT, "bg-primary text-primary-foreground hover:brightness-110");
-const SECONDARY = cn(ACT, "bg-white/[0.05] text-foreground ring-1 ring-white/12 hover:bg-white/10");
+  "inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none";
+const PRIMARY = cn(ACT, "btn-glow");
+const SECONDARY = cn(ACT, "well text-foreground");
+const CHIP = "rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap";
 
 interface Props {
   card: OpenCard;
@@ -44,8 +46,9 @@ export function FareTable({ label }: { label: string }) {
   return (
     <div className="flex flex-col text-sm">
       {fare.lines.filter((line) => !line.total).map((line) => (
-        <div key={line.label} className="flex justify-between gap-3 py-0.5 text-muted-foreground">
+        <div key={line.label} className="flex items-baseline gap-2 py-[3px] text-muted-foreground">
           <span>{line.label}</span>
+          <span aria-hidden="true" className="mb-1 flex-1 border-b border-dotted border-white/15" />
           <span className="text-foreground tabular-nums">{line.amount}</span>
         </div>
       ))}
@@ -53,12 +56,12 @@ export function FareTable({ label }: { label: string }) {
         <p key={text} className="mt-0.5 text-[13px] text-muted-foreground">{text}</p>
       ))}
       {fare.lines.filter((line) => line.total).map((line) => (
-        <div key={line.label} className="mt-2 flex justify-between gap-3 border-t border-white/10 pt-2 text-[15px] font-semibold">
-          <span>{line.label}</span>
-          <span className="text-glow tabular-nums">{line.amount}</span>
+        <div key={line.label} className="well mt-2.5 flex items-center justify-between gap-3 rounded-[1.15rem] px-4 py-2.5">
+          <span className="text-[15px] font-medium">{line.label}</span>
+          <span className="text-gradient-glow text-2xl font-semibold tracking-tight tabular-nums">{line.amount}</span>
         </div>
       ))}
-      {fare.question && <p className="mt-3 font-medium">{fare.question}</p>}
+      {fare.question && <p className="mt-3 text-[15px] font-medium">{fare.question}</p>}
     </div>
   );
 }
@@ -66,7 +69,7 @@ export function FareTable({ label }: { label: string }) {
 function ConfirmControls({ card, onAnswer }: Props) {
   return (
     <>
-      <div className="mt-4 flex gap-2" role="group" aria-labelledby={labelId(card.spec)}>
+      <div className="mt-3 flex gap-2.5" role="group" aria-labelledby={labelId(card.spec)}>
         {singleChoices(card.spec).map((choice) => (
           <button
             key={choice.label}
@@ -74,6 +77,7 @@ function ConfirmControls({ card, onAnswer }: Props) {
             className={choice.value === true ? PRIMARY : SECONDARY}
             onClick={() => onAnswer(choiceAnswer(choice))}
           >
+            {choice.value === true ? <Check className="size-4" strokeWidth={2.6} /> : <X className="size-4" strokeWidth={2.2} />}
             {choice.label}
           </button>
         ))}
@@ -87,7 +91,7 @@ function SelectControls({ card, onAnswer }: Props) {
   const choices = singleChoices(card.spec);
   return (
     <>
-      <div className="mt-3 flex flex-col gap-2" role="group" aria-labelledby={labelId(card.spec)}>
+      <div className="stagger mt-3.5 flex flex-col gap-2" role="group" aria-labelledby={labelId(card.spec)}>
         {choices.map((choice, i) => {
           if (choice.value === null) return null;
           const parts = optionParts(choice.label);
@@ -95,13 +99,17 @@ function SelectControls({ card, onAnswer }: Props) {
             <button key={`${i}:${choice.label}`} type="button" className={OPTION} onClick={() => onAnswer(choiceAnswer(choice))}>
               {parts ? (
                 <>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="text-[15px] font-medium">{parts.title}</span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <FlightTimes title={parts.title} />
                     <span className="text-xs text-muted-foreground">{parts.subtitle}</span>
                   </span>
-                  <span className="flex shrink-0 flex-col items-end text-right">
+                  <span className="flex shrink-0 flex-col items-end gap-1 text-right">
                     <span className="text-xs text-muted-foreground tabular-nums">{parts.price}</span>
-                    {parts.note && <span className="text-[13px] font-semibold text-success">{parts.note}</span>}
+                    {parts.note && (
+                      <span className={cn(CHIP, /^you pay/i.test(parts.note) ? "bg-glow/18 text-glow-2" : "bg-success/12 text-success")}>
+                        {parts.note}
+                      </span>
+                    )}
                   </span>
                 </>
               ) : (
@@ -130,17 +138,20 @@ function MultiSelectControls({ card, onAnswer }: Props) {
     else onAnswer(result);
   };
   return (
-    <form className="mt-3 flex flex-col gap-2" noValidate onSubmit={onSubmit} onChange={() => setError(null)}>
-      <div className="flex flex-col gap-2" role="group" aria-labelledby={labelId(spec)}>
+    <form className="mt-4 flex flex-col gap-2.5" noValidate onSubmit={onSubmit} onChange={() => setError(null)}>
+      <div className="stagger flex flex-col gap-2" role="group" aria-labelledby={labelId(spec)}>
         {(spec.options ?? []).map(({ value, label }) => (
-          <label key={value} className={cn(OPTION, "cursor-pointer justify-start has-[:checked]:bg-white/[0.07] has-[:checked]:ring-white/30")}>
-            <input type="checkbox" checked={checked.includes(value)} onChange={(e) => toggle(value, e.target.checked)} className="size-4 accent-[var(--glow)]" />
+          <label key={value} className={cn(OPTION, "cursor-pointer justify-start has-[:checked]:bg-glow/10 has-[:checked]:shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--glow-2)_55%,transparent)]")}>
+            <input type="checkbox" checked={checked.includes(value)} onChange={(e) => toggle(value, e.target.checked)} className="peer sr-only" />
+            <span aria-hidden="true" className="grid size-5 shrink-0 place-items-center rounded-full text-transparent shadow-[inset_0_0_0_1.5px_oklch(1_0_0/0.3)] transition-all peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:shadow-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+              <Check className="size-3.5" strokeWidth={3} />
+            </span>
             <span className="text-[15px] font-medium">{label || value}</span>
           </label>
         ))}
       </div>
       <div className="flex">
-        <button type="submit" className={PRIMARY}>Send</button>
+        <button type="submit" className={PRIMARY}><ArrowUp className="size-4" strokeWidth={2.6} /> Send</button>
       </div>
       <ErrorLine message={error} />
     </form>
@@ -157,7 +168,7 @@ function DateControls({ card, onAnswer }: Props) {
     onAnswer({ value, display: longDate(value) });
   };
   return (
-    <form className="mt-3 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
+    <form className="mt-4 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
       <div className="flex items-center gap-2">
         <input
           id={inputId(spec)}
@@ -170,7 +181,7 @@ function DateControls({ card, onAnswer }: Props) {
             setError(null);
           }}
         />
-        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!value}>Use date</button>
+        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!value}><CalendarCheck className="size-4" strokeWidth={2.3} /> Use date</button>
       </div>
       <ErrorLine message={error} />
     </form>
@@ -189,7 +200,7 @@ function OptionalTextControls({ card, onAnswer }: Props) {
     else onAnswer(result);
   };
   return (
-    <form className="mt-3 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
+    <form className="mt-4 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
@@ -203,7 +214,7 @@ function OptionalTextControls({ card, onAnswer }: Props) {
             setError(null);
           }}
         />
-        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!text.trim()}>Save</button>
+        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!text.trim()}><Check className="size-4" strokeWidth={2.6} /> Save</button>
       </div>
       <SkipLink card={card} onAnswer={onAnswer} />
       <ErrorLine message={error} />
@@ -214,9 +225,27 @@ function OptionalTextControls({ card, onAnswer }: Props) {
 function SkipLink({ card, onAnswer }: Props) {
   if (card.spec.required !== false) return null;
   return (
-    <button type="button" className="mt-2 self-start text-[13px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline" onClick={() => onAnswer({ value: null, display: SKIPPED_DISPLAY })}>
-      Skip
+    <button type="button" className="mt-3 -ml-1 inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-[13px] text-muted-foreground transition-colors outline-none hover:bg-white/[0.07] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring" onClick={() => onAnswer({ value: null, display: SKIPPED_DISPLAY })}>
+      <Forward className="size-3.5" /> Skip
     </button>
+  );
+}
+
+/** "17:45 → 20:30" as two times with a small flight path between them. */
+function FlightTimes({ title }: { title: string }) {
+  const [from, to] = title.split(/\s*→\s*/);
+  if (!to) return <span className="text-[15px] font-medium">{title}</span>;
+  return (
+    <span className="flex items-center gap-2 text-base font-semibold tracking-tight tabular-nums">
+      {from}
+      <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground transition-colors group-hover:text-glow-2">
+        <span className="h-px w-3 bg-current opacity-50" />
+        <Plane className="size-3.5 rotate-45 transition-transform duration-300 group-hover:translate-x-0.5" />
+        <span className="h-px w-3 bg-current opacity-50" />
+      </span>
+      <span className="sr-only">to</span>
+      {to}
+    </span>
   );
 }
 

@@ -21,7 +21,7 @@ export function ConversationButton({ open, unread, onToggle }: Props) {
       <MessagesSquare className="size-4" />
       <span className="hidden sm:inline">Conversation</span>
       {unread > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10.5px] font-semibold text-primary-foreground tabular-nums">
+        <span className="btn-glow absolute -top-1.5 -right-1.5 z-10 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[10.5px] font-bold tabular-nums">
           {unread > 99 ? "99+" : unread}
         </span>
       )}

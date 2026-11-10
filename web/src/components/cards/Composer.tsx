@@ -17,7 +17,7 @@ interface Props {
 
 const MAX_ROWS_PX = 140;
 
-const shell = "rounded-2xl bg-white/[0.04] p-1.5 pl-4 ring-1 ring-white/10 transition-shadow";
+const shell = "well rounded-[1.6rem] p-1.5 pl-4";
 
 /** The bottom bar. It answers the open typed question, and waits when there is none. */
 export function Composer({ card, onAnswer }: Props) {
@@ -92,8 +92,8 @@ export function TypedAnswer({ card, onAnswer }: { card: OpenCard; onAnswer: (ans
       <div
         className={cn(
           shell,
-          "flex items-end gap-2 focus-within:ring-white/25",
-          error && "ring-destructive/50",
+          "flex items-end gap-2",
+          error && "!shadow-[inset_0_0_0_1px_var(--destructive)]",
         )}
       >
         {isFile ? (

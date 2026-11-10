@@ -33,7 +33,7 @@ export function MicControl({ inCall, muted, level, mics, onMute, onPick }: Props
   const current = mics.devices.find((d) => d.deviceId === mics.deviceId);
 
   return (
-    <div className="flex items-center rounded-full bg-white/[0.06] ring-1 ring-white/10">
+    <div className="well flex items-center rounded-full">
       <Tooltip>
         <TooltipTrigger asChild>
           <button
@@ -51,7 +51,7 @@ export function MicControl({ inCall, muted, level, mics, onMute, onPick }: Props
             {/* The ring breathes with the caller's voice, so they can see the mic is picking them up. */}
             <span
               className="pointer-events-none absolute inset-1 rounded-full transition-[box-shadow] duration-75"
-              style={{ boxShadow: `0 0 0 ${1 + glow * 5}px color-mix(in oklch, var(--glow) ${Math.round(15 + glow * 55)}%, transparent)` }}
+              style={{ boxShadow: `0 0 0 ${1 + glow * 5}px color-mix(in oklch, var(--glow-2) ${Math.round(15 + glow * 55)}%, transparent)` }}
             />
             {muted ? <MicOff className="size-5" /> : <Mic className="size-5" />}
           </button>

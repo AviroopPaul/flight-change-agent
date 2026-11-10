@@ -89,41 +89,42 @@
 }
 
 .dark {
-    --background: oklch(0.14 0.02 265);
-    --foreground: oklch(0.96 0.01 250);
-    --card: oklch(0.19 0.025 262 / 70%);
-    --card-foreground: oklch(0.96 0.01 250);
-    --popover: oklch(0.2 0.03 262);
-    --popover-foreground: oklch(0.96 0.01 250);
-    --primary: oklch(0.84 0.13 205);
-    --primary-foreground: oklch(0.18 0.04 250);
+    /* Hunar's palette on black: ink #121212, brand blue #006EDD, bright blue #369BFF. */
+    --background: oklch(0.08 0.004 255);
+    --foreground: oklch(0.97 0.004 250);
+    --card: oklch(0.17 0.006 255 / 70%);
+    --card-foreground: oklch(0.97 0.004 250);
+    --popover: oklch(0.16 0.006 255);
+    --popover-foreground: oklch(0.97 0.004 250);
+    --primary: oklch(0.55 0.19 255);
+    --primary-foreground: oklch(1 0 0);
     --secondary: oklch(1 0 0 / 7%);
-    --secondary-foreground: oklch(0.96 0.01 250);
+    --secondary-foreground: oklch(0.97 0.004 250);
     --muted: oklch(1 0 0 / 6%);
-    --muted-foreground: oklch(0.72 0.03 255);
+    --muted-foreground: oklch(0.72 0.012 255);
     --accent: oklch(1 0 0 / 9%);
     --accent-foreground: oklch(0.98 0 0);
-    --destructive: oklch(0.66 0.21 18);
+    --destructive: oklch(0.65 0.23 22);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 14%);
-    --ring: oklch(0.84 0.13 205 / 70%);
-    --chart-1: oklch(0.84 0.13 205);
-    --chart-2: oklch(0.7 0.17 290);
-    --chart-3: oklch(0.78 0.15 160);
-    --chart-4: oklch(0.82 0.15 80);
-    --chart-5: oklch(0.66 0.21 18);
-    --sidebar: oklch(0.17 0.02 265);
-    --sidebar-foreground: oklch(0.96 0.01 250);
-    --sidebar-primary: oklch(0.84 0.13 205);
-    --sidebar-primary-foreground: oklch(0.18 0.04 250);
+    --ring: oklch(0.68 0.17 252 / 75%);
+    --chart-1: oklch(0.68 0.17 252);
+    --chart-2: oklch(0.82 0.1 248);
+    --chart-3: oklch(0.82 0.16 155);
+    --chart-4: oklch(0.83 0.14 80);
+    --chart-5: oklch(0.65 0.23 22);
+    --sidebar: oklch(0.12 0.005 255);
+    --sidebar-foreground: oklch(0.97 0.004 250);
+    --sidebar-primary: oklch(0.55 0.19 255);
+    --sidebar-primary-foreground: oklch(1 0 0);
     --sidebar-accent: oklch(1 0 0 / 8%);
     --sidebar-accent-foreground: oklch(0.98 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.84 0.13 205 / 70%);
-    --success: oklch(0.8 0.15 160);
+    --sidebar-ring: oklch(0.68 0.17 252 / 75%);
+    --success: oklch(0.84 0.17 152);
     --warning: oklch(0.83 0.14 80);
-    --glow: oklch(0.84 0.13 205);
-    --glow-2: oklch(0.68 0.19 292);
+    --glow: oklch(0.68 0.17 252);
+    --glow-2: oklch(0.82 0.1 248);
 }
 
 @layer base {
@@ -145,27 +146,144 @@
 html, body, #root { height: 100%; }
 body { overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-/* Deep-space backdrop: two soft nebula glows and a faint HUD grid that fades out at the edges. */
+/* Black stage. A faint blue light sits behind the orb so the glass has something to bend. */
 .app-bg {
   background:
-    radial-gradient(60rem 40rem at 18% 30%, color-mix(in oklch, var(--glow) 14%, transparent), transparent 70%),
-    radial-gradient(50rem 36rem at 85% 90%, color-mix(in oklch, var(--glow-2) 16%, transparent), transparent 70%),
-    var(--background);
-}
-.app-bg::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(to right, oklch(1 0 0 / 3.5%) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 3.5%) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse at 35% 45%, black 10%, transparent 70%);
+    radial-gradient(44rem 40rem at 50% 44%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 68%),
+    radial-gradient(38rem 24rem at 92% 110%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 70%),
+    radial-gradient(34rem 22rem at 4% -10%, color-mix(in oklch, var(--primary) 10%, transparent), transparent 70%),
+    #000;
 }
 
-.glass {
-  background: linear-gradient(180deg, oklch(1 0 0 / 5%), oklch(1 0 0 / 2%));
-  border: 1px solid oklch(1 0 0 / 9%);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
+/* ---- Liquid glass --------------------------------------------------------
+   One material at three depths. Each has a clear body that blurs and saturates what is behind it,
+   a bright top edge, a soft inner sheen and a light rim that is strongest at two corners.
+   They live in the components layer so Tailwind utilities (fixed, absolute) still win. */
+@layer components {
+  .glass, .glass-card, .glass-panel {
+    position: relative;
+    isolation: isolate;
+  }
+  .glass::before, .glass-card::before, .glass-panel::before {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    border-radius: inherit; padding: 1px;
+    background: linear-gradient(140deg, oklch(1 0 0 / 46%) 0%, oklch(1 0 0 / 9%) 26%, oklch(1 0 0 / 4%) 62%, oklch(1 0 0 / 24%) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  }
+
+  /* Controls: pills, the dock, icon buttons. */
+  .glass {
+    background: linear-gradient(180deg, oklch(1 0 0 / 11%) 0%, oklch(1 0 0 / 4%) 46%, oklch(1 0 0 / 7%) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 22%),
+      inset 0 -8px 14px -10px oklch(1 0 0 / 12%),
+      0 12px 32px -16px oklch(0 0 0 / 90%);
+  }
+
+  /* The floating cards: thicker, so text stays readable over the orb. */
+  .glass-card {
+    border-radius: 1.75rem;
+    background:
+      radial-gradient(120% 60% at 0% 0%, color-mix(in oklch, var(--glow) 9%, transparent), transparent 60%),
+      linear-gradient(180deg, oklch(1 0 0 / 10%) 0%, oklch(1 0 0 / 3%) 38%, oklch(1 0 0 / 5%) 100%),
+      oklch(0.15 0.006 255 / 58%);
+    backdrop-filter: blur(36px) saturate(190%);
+    -webkit-backdrop-filter: blur(36px) saturate(190%);
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 26%),
+      inset 0 22px 30px -26px oklch(1 0 0 / 22%),
+      inset 0 -14px 22px -20px oklch(1 0 0 / 10%),
+      0 2px 6px oklch(0 0 0 / 35%),
+      0 36px 80px -28px oklch(0 0 0 / 95%);
+  }
+  /* A streak of light crosses the card once as it lands. */
+  .glass-card::after {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; border-radius: inherit;
+    background: linear-gradient(108deg, transparent 38%, oklch(1 0 0 / 13%) 48%, oklch(1 0 0 / 3%) 55%, transparent 64%) no-repeat;
+    background-size: 260% 100%;
+    animation: glass-sheen 1.25s 0.18s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+  }
+
+  /* Big sheets: the conversation drawer and the timeline. */
+  .glass-panel {
+    background:
+      linear-gradient(180deg, oklch(1 0 0 / 7%) 0%, oklch(1 0 0 / 2%) 30%, oklch(1 0 0 / 3%) 100%),
+      oklch(0.12 0.005 255 / 78%);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 18%), 0 0 90px -20px oklch(0 0 0 / 95%);
+  }
+
+  /* A recessed well inside a glass surface: option rows, fields, quiet buttons. */
+  .well {
+    background: oklch(1 0 0 / 5%);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 9%), inset 0 1px 0 0 oklch(1 0 0 / 10%);
+    transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  button.well:hover, label.well:hover, .well:focus-within {
+    background: oklch(1 0 0 / 9%);
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--glow-2) 55%, transparent),
+      inset 0 1px 0 0 oklch(1 0 0 / 18%),
+      0 10px 28px -14px color-mix(in oklch, var(--glow) 70%, transparent);
+  }
+  button.well:hover, label.well:hover { transform: translateY(-1px); }
+  button.well:active, label.well:active { transform: scale(0.985); }
+
+  /* The main action: lit blue glass. */
+  .btn-glow {
+    position: relative;
+    color: var(--primary-foreground);
+    background: linear-gradient(180deg, oklch(0.72 0.16 250) 0%, oklch(0.62 0.19 254) 48%, oklch(0.53 0.2 256) 100%);
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 45%),
+      inset 0 -6px 10px -6px oklch(0.4 0.16 258 / 80%),
+      0 10px 30px -10px color-mix(in oklch, var(--primary) 90%, transparent);
+    transition: filter 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s;
+  }
+  .btn-glow:hover:not(:disabled) {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 55%),
+      inset 0 -6px 10px -6px oklch(0.4 0.16 258 / 80%),
+      0 14px 36px -10px var(--primary);
+  }
+  .btn-glow:active:not(:disabled) { transform: scale(0.97); }
+  .btn-glow:disabled {
+    color: var(--muted-foreground);
+    background: oklch(1 0 0 / 6%);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 9%), inset 0 1px 0 0 oklch(1 0 0 / 10%);
+  }
+
+  .btn-danger {
+    color: white;
+    background: linear-gradient(180deg, oklch(0.72 0.21 24) 0%, oklch(0.6 0.24 22) 100%);
+    box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 40%), 0 10px 30px -10px oklch(0.6 0.24 22 / 80%);
+    transition: filter 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .btn-danger:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn-danger:active:not(:disabled) { transform: scale(0.97); }
+
+  /* Card content rises in, one piece after the other. */
+  .stagger > * { animation: rise-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .stagger > *:nth-child(1) { animation-delay: 0.08s; }
+  .stagger > *:nth-child(2) { animation-delay: 0.14s; }
+  .stagger > *:nth-child(3) { animation-delay: 0.2s; }
+  .stagger > *:nth-child(4) { animation-delay: 0.26s; }
+  .stagger > *:nth-child(5) { animation-delay: 0.32s; }
+  .stagger > *:nth-child(n + 6) { animation-delay: 0.38s; }
+}
+@keyframes glass-sheen { from { background-position: 120% 0; } to { background-position: -60% 0; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); filter: blur(6px); } }
+
+.text-gradient-glow {
+  background: linear-gradient(180deg, var(--glow-2), var(--glow));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
 /* The thin rotating HUD rings around the orb. */
@@ -198,6 +316,7 @@ body { overflow: hidden; -webkit-font-smoothing: antialiased; }
 input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.85); cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb-ring, .shimmer { animation: none; }
+  .orb-ring, .shimmer, .stagger > *, .glass-card::after { animation: none; }
+  .glass-card::after { display: none; }
   .shimmer { color: var(--muted-foreground); background: none; }
 }

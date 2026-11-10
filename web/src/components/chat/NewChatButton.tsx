@@ -1,4 +1,4 @@
-import { SquarePen } from "lucide-react";
+import { MessageSquarePlus } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { newChatUrl } from "../../config";
 import { TOP_BUTTON } from "../stage/topButton";
@@ -16,7 +16,7 @@ export function NewChatButton({ inCall }: { inCall: boolean }) {
     <Tooltip>
       <TooltipTrigger asChild>
         <button type="button" onClick={onClick} aria-label="New chat" className={TOP_BUTTON}>
-          <SquarePen className="size-4" />
+          <MessageSquarePlus className="size-4" />
           <span className="hidden sm:inline">New chat</span>
         </button>
       </TooltipTrigger>

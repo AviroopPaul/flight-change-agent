@@ -13,7 +13,7 @@ interface Props {
 }
 
 const CORE_GLOW =
-  "radial-gradient(circle, color-mix(in oklch, var(--glow) 60%, transparent) 0%, color-mix(in oklch, var(--glow-2) 32%, transparent) 45%, transparent 72%)";
+  "radial-gradient(circle, color-mix(in oklch, var(--glow) 55%, transparent) 0%, color-mix(in oklch, var(--primary) 34%, transparent) 45%, transparent 72%)";
 
 /** The agent's presence: LiveKit's Aura shader around a glowing core, inside two slow HUD rings. */
 export function VoiceOrb({ state, audioTrack, volume, live }: Props) {
@@ -52,8 +52,8 @@ export function VoiceOrb({ state, audioTrack, volume, live }: Props) {
         state={state}
         audioTrack={audioTrack}
         volume={volume}
-        color="#1FD5F9"
-        colorShift={0.35}
+        color="#369BFF"
+        colorShift={0.12}
         themeMode="dark"
         className={cn("relative transition-[height] duration-500", live ? "h-60 sm:h-72 lg:h-[22rem] xl:h-[26rem]" : "h-48 sm:h-60 lg:h-72 xl:h-80")}
       />
