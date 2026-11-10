@@ -398,3 +398,67 @@ def test_refund_reply_says_what_is_still_needed_and_to_wait():
     assert "passenger names" in msg and "not finished" in msg
     assert "Ask no new question until it is submitted" in msg
     assert r.state.open_card.field == "passengerNames"  # the names box stays open
+
+
+def test_saved_date_can_be_picked_again_on_the_calendar():
+    s = state_with(pnr="ABC123", passengerNames=["RAHUL SHARMA"], contactEmail=None)
+    r = submit_call_value(s, "newTravelDate", "2026-11-20", NOW, True)
+    r = request_chat_input(r.state, "newTravelDate", NOW, True)
+    assert r.reply.ok and r.reply.value.startswith("Sent to the chat.")
+    assert r.state.open_card.field == "newTravelDate" and r.state.open_card.kind == "date"
+    assert r.state.fields["newTravelDate"].value == "2026-11-20"  # kept until a new day is picked
+    r = answer_card(r.state, r.state.open_card.id, "2026-11-25", NOW, True)
+    assert r.state.fields["newTravelDate"].value == "2026-11-25" and r.state.fields["newTravelDate"].source == "chat"
+
+
+def test_picking_the_date_again_cancels_the_open_flight_list():
+    r = advance(ready_for_flight(), NOW, False)
+    flight_card = r.state.open_card
+    assert flight_card.field == "selectedFlight"
+    r = request_chat_input(r.state, "newTravelDate", NOW, True)
+    assert r.state.open_card.field == "newTravelDate"
+    assert flight_card.id in [e.payload["requestId"] for e in r.events if e.kind == "inputCancel"]
+
+
+def test_other_filled_fields_are_not_asked_again():
+    r = request_chat_input(state_with(pnr="ABC123", passengerNames=["RAHUL SHARMA"]), "passengerNames", NOW, True)
+    assert not r.reply.ok and "already filled in" in r.reply.message
+
+
+def test_email_can_be_fixed_while_flights_are_listed():
+    r = advance(ready_for_flight(), NOW, False)
+    flight_card = r.state.open_card
+    r = request_chat_input(r.state, "contactEmail", NOW, True)
+    assert r.reply.ok and r.reply.value.startswith("Sent to the chat.")
+    assert flight_card.id in [e.payload["requestId"] for e in r.events if e.kind == "inputCancel"]
+    assert r.state.open_card.field == "contactEmail"
+    r = answer_card(r.state, r.state.open_card.id, "rahul@example.com", NOW, True)
+    assert r.state.fields["contactEmail"].value == "rahul@example.com"
+    assert r.state.open_card.field == "selectedFlight"  # the list comes back
+
+
+def test_booking_reference_can_be_changed_and_names_start_over():
+    r = request_chat_input(state_with(pnr="ABC123", passengerNames=["RAHUL SHARMA"]), "pnr", NOW, True)
+    assert r.reply.ok and r.state.open_card.field == "pnr"
+    r = answer_card(r.state, r.state.open_card.id, "PQR456", NOW, True)
+    assert r.state.fields["pnr"].value == "PQR456"
+    assert r.state.fields["passengerNames"].status != "valid"
+    assert r.state.open_card.field == "passengerNames"
+
+
+def test_booking_reference_reopen_cancels_an_open_names_box():
+    r = request_chat_input(new_state("s1"), "pnr", NOW, True)
+    r = answer_card(r.state, r.state.open_card.id, "PQR456", NOW, True)
+    r = answer_card(r.state, r.state.open_card.id, "Ananya Iyer", NOW, True)
+    names_card = r.state.open_card
+    assert names_card.field == "passengerNames"
+    r = request_chat_input(r.state, "pnr", NOW, True)
+    assert r.state.open_card.field == "pnr"
+    assert names_card.id in [e.payload["requestId"] for e in r.events if e.kind == "inputCancel"]
+
+
+def test_reopen_waits_for_an_unrelated_open_box():
+    r = request_chat_input(state_with(pnr="ABC123", passengerNames=["RAHUL SHARMA"]), "contactEmail", NOW, True)
+    assert r.state.open_card.field == "contactEmail"
+    r = request_chat_input(r.state, "pnr", NOW, True)
+    assert not r.reply.ok and "Another chat box is open" in r.reply.message
