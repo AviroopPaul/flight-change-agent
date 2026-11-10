@@ -98,7 +98,7 @@ In order of value to the review:
 - **One day before, or 40+ min before:** open a new session, type `PQR456` only, then close the tab. Save the URL. This session will be `partial` (revision 1) when you record scene 6.
 - Use Chrome with a headset, so the agent does not hear itself.
 - Have these tabs ready:
-  - The live site.
+  - The live site with `?guide=1`. A **Guide** pane opens on the left with the test bookings (tap a PNR to copy it) and the scenarios to tick off. It keeps the param across **New chat**.
   - `https://flight-backend-820256992821.asia-south1.run.app/stub/records?sessionId=<id>` (fill in the id during the take).
   - A terminal for the restart in scene 5.
 - Make one warm-up call, so the agent is not cold.

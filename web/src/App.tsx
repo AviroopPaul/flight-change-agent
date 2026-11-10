@@ -10,6 +10,8 @@ import { NewChatButton } from "./components/chat/NewChatButton";
 import { DebugButton } from "./components/debug/DebugButton";
 import { DebugPanel } from "./components/debug/DebugPanel";
 import { FloatingCards } from "./components/float/FloatingCards";
+import { GuideButton } from "./components/guide/GuideButton";
+import { GuidePanel } from "./components/guide/GuidePanel";
 import { Stage } from "./components/stage/Stage";
 import { createDemo } from "./demo/demo";
 import { useCall } from "./hooks/useCall";
@@ -49,6 +51,8 @@ export function App() {
   const hadCall = state.items.some((item) => item.kind === ThreadItemKind.TRANSCRIPT);
   const callBack = hadCall && !inCall && !record && Boolean(session.sessionId) && !demo;
   const [debugOpen, setDebugOpen] = useState(false);
+  // The guide starts open where there is room beside the stage; on small screens it waits for its button.
+  const [guideOpen, setGuideOpen] = useState(() => config.guide && window.matchMedia("(min-width: 1024px)").matches);
   const onAnswer = (open: OpenCard, answer: Answer) => submit(open.spec, answer, sendInput);
 
   // The demo has no LiveKit room, so its mute is a local flag that just silences the meters.
@@ -90,32 +94,37 @@ export function App() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="app-bg relative h-dvh overflow-hidden">
-        <Stage
-          call={state.call}
-          orb={orb}
-          voice={voice}
-          caption={caption}
-          micLevel={micLevel}
-          orbVolume={demo && orb === "listening" ? demoMicLevel : undefined}
-          mics={mics}
-          onCall={onCall}
-          onMute={onMute}
-          onPickMic={pickMic}
-          onStop={chat.optOut}
-          stopDisabled={!session.sessionId || Boolean(record) || Boolean(demo)}
-          callBack={callBack}
-          actions={
-            <>
-              <NewChatButton inCall={inCall} />
-              <DebugButton
-                open={debugOpen}
-                disabled={!session.sessionId || !config.backend || Boolean(demo)}
-                onToggle={() => setDebugOpen((o) => !o)}
-              />
-              <ConversationButton open={paneOpen} unread={unread} onToggle={() => setPaneOpen((o) => !o)} />
-            </>
-          }
-        />
+        <div className={`h-full transition-[padding] duration-300 ease-out ${guideOpen ? "lg:pl-[340px]" : ""}`}>
+          <Stage
+            call={state.call}
+            orb={orb}
+            voice={voice}
+            caption={caption}
+            micLevel={micLevel}
+            orbVolume={demo && orb === "listening" ? demoMicLevel : undefined}
+            mics={mics}
+            onCall={onCall}
+            onMute={onMute}
+            onPickMic={pickMic}
+            onStop={chat.optOut}
+            stopDisabled={!session.sessionId || Boolean(record) || Boolean(demo)}
+            callBack={callBack}
+            actions={
+              <>
+                {config.guide && <GuideButton open={guideOpen} onToggle={() => setGuideOpen((o) => !o)} />}
+                <NewChatButton inCall={inCall} />
+                <DebugButton
+                  open={debugOpen}
+                  disabled={!session.sessionId || !config.backend || Boolean(demo)}
+                  onToggle={() => setDebugOpen((o) => !o)}
+                />
+                <ConversationButton open={paneOpen} unread={unread} onToggle={() => setPaneOpen((o) => !o)} />
+              </>
+            }
+          />
+        </div>
+
+        {config.guide && <GuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />}
 
         {notice && (
           <p

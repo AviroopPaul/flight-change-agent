@@ -46,6 +46,8 @@ export function newChatUrl(): string {
   return `${location.pathname}${query ? `?${query}` : ""}`;
 }
 export const demo = params.get("demo") === "1";
+/** ?guide=1 shows the presenter guide (test bookings and scenarios) on the left. */
+export const guide = params.get("guide") === "1";
 export const demoPace = pace > 0 ? pace : DEFAULT_DEMO_PACE;
 export const server = parseServer(rawServer);
 export const backend = demo ? null : server;
