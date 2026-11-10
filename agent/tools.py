@@ -7,7 +7,7 @@ from typing import Literal
 from livekit.agents import Agent, RunContext, function_tool, get_job_context
 
 from backend_client import BackendClient
-from prompts import clean_text
+from prompts import clean_text, month_calendar
 
 log = logging.getLogger("tools")
 CallField = Literal["changeReason", "newTravelDate", "timeFlexibility"]
@@ -128,6 +128,11 @@ class FlightAgent(Agent):
     async def stop_request(self, context: RunContext) -> str:
         """Stop the whole request. Only after the caller has confirmed they want to stop."""
         return await self.logic.stop_request()
+
+    @function_tool(name="month_calendar")
+    async def month_calendar_tool(self, context: RunContext, month: str) -> str:
+        """Every day of a month (YYYY-MM) with its weekday. Use it for a weekday named beyond the two weeks listed."""
+        return month_calendar(month)
 
     @function_tool()
     async def check_status(self, context: RunContext) -> str:

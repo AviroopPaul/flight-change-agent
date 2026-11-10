@@ -34,6 +34,7 @@ TYPED_WINS = "typed value preferred over spoken"
 WELCOME = "Hi! I can help you change your flight. Tap the call button above to start, or answer the questions here."
 
 FLIGHT_FIELDS = {"selectedFlight", "fareAcceptance"}
+CALL_CHAT_ORDER = [*CHAT_ORDER[:3], "newTravelDate", *CHAT_ORDER[3:]]
 REFUND_SKIPS = {"selectedFlight", "fareAcceptance", "contactEmail", "newTravelDate", "timeFlexibility"}
 FLEX_LABELS = {
     "morning": "Morning (5 am to 12 pm)",
@@ -302,7 +303,8 @@ def _candidates(state: SessionState, call_active: bool) -> list[str]:
     if call_active:
         # The agent starts the chat (usually with pnr). After that the typed fields follow in order on
         # their own, so a missed request (seen in a live call) can't leave a field unasked.
-        follow = [f for f in CHAT_ORDER if f not in state.requested] if _valid(state, "pnr") else []
+        # The date can be spoken or picked on a calendar, so its card follows the email in the chat.
+        follow = [f for f in CALL_CHAT_ORDER if f not in state.requested] if _valid(state, "pnr") else []
         return list(state.requested) + follow
     return CHAT_ORDER + ["changeReason", "newTravelDate", "timeFlexibility"]
 
@@ -424,6 +426,7 @@ def submit_call_value(state: SessionState, field: str, raw: Any, now: datetime, 
         return _done(s, events, Ok(f"Already saved from the chat: {f.value}."))
     changed = f.status == "valid" and f.value != value
     _set_valid(s, field, value, "call", now)
+    _cancel_open(s, events, "Answered on the call.", only={field})
     if field in ("newTravelDate", "timeFlexibility") and changed:
         _clear_flight(s, events, "The date or time changed.")
     events.append(_update(s, field, now))
@@ -440,6 +443,8 @@ def _wait_hint(s: SessionState) -> str:
     card = s.open_card
     if card is None or card.purpose != "collect":
         return ""
+    if card.field == "newTravelDate":
+        return " A calendar for the new travel date is open in the chat. The caller can say the date or pick it there."
     return (f" A chat box is open for: {card.label}. Remind the caller to finish it in the chat, then wait. "
             "Ask no new question until it is submitted.")
 

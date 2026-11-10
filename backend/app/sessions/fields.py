@@ -26,7 +26,6 @@ REQUIRED_REFUND = ["pnr", "passengerNames", "changeReason"]
 OPTIONAL = ["contactEmail"]
 CHAT_ORDER = ["pnr", "passengerNames", "contactEmail", "selectedFlight", "fareAcceptance"]
 REASON_CATEGORIES = ["schedule", "personal", "medical", "missedFlight", "other"]
-MAX_DAYS_AHEAD = 330
 MIN_HOURS_BEFORE = 3
 
 E_PNR_FORMAT = "A booking reference has 6 letters or digits, like ABC123."
@@ -37,7 +36,6 @@ E_NAME = "That name doesn't match a passenger on this booking. Please type it ex
 E_NAME_DUP = "You've already given that passenger."
 E_DATE_FORMAT = "Please give the date as a day, month and year."
 E_DATE_PAST = "That date has passed. Please pick a future date."
-E_DATE_FAR = "We can only book up to 330 days ahead."
 E_DATE_SAME = "That's the same day as your current flight. Please pick a different date."
 E_FLEX = "Please choose morning, afternoon, evening or any time."
 E_EMAIL = "That email address doesn't look right."
@@ -89,8 +87,6 @@ def normalize_date(raw, now: datetime, current_departure: datetime | None) -> Ok
     today = now.date()
     if day < today:
         return Err(E_DATE_PAST)
-    if day > today + timedelta(days=MAX_DAYS_AHEAD):
-        return Err(E_DATE_FAR)
     if current_departure is not None and day == current_departure.date():
         return Err(E_DATE_SAME)
     return Ok(day)

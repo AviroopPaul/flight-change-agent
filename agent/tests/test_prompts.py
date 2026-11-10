@@ -96,3 +96,26 @@ def test_system_prompt_mentions_box_open_at_start():
 def test_rules_say_one_step_at_a_time():
     p = system_prompt(CTX)
     assert "Ask no new spoken question while a chat box is open" in p
+
+
+def test_event_note_for_the_date_calendar_allows_voice_or_pick():
+    note = event_note("fieldUpdate", {"field": "contactEmail", "status": "valid", "summary": "Skipped.",
+                                      "openCard": {"field": "newTravelDate", "label": "New travel date", "optional": False}})
+    assert "calendar" in note and "say" in note and "Ask nothing else" not in note
+
+
+def test_prompt_sets_no_booking_horizon():
+    p = system_prompt(CTX)
+    assert "month_calendar" in p and "not a limit" in p
+
+
+def test_month_calendar_lists_every_day_with_weekday():
+    from prompts import month_calendar
+    out = month_calendar("2027-02")
+    assert out.startswith("February 2027:") and "Mon 1 Feb = 2027-02-01" in out and "Sun 28 Feb = 2027-02-28" in out
+    assert "2027-02-29" not in out
+
+
+def test_month_calendar_rejects_bad_input():
+    from prompts import month_calendar
+    assert month_calendar("next month") == "Give the month as YYYY-MM, for example 2026-12."

@@ -6,6 +6,7 @@ import { INPUT_TYPES, inputId, labelId } from "../../lib/inputs";
 import { InputKind } from "../../protocol";
 import type { Answer, OpenCard } from "../../state/conversation";
 import { cn } from "@/lib/utils";
+import { CalendarPicker } from "./CalendarPicker";
 import { ErrorLine } from "./ErrorLine";
 
 const OPTION =
@@ -168,21 +169,19 @@ function DateControls({ card, onAnswer }: Props) {
     onAnswer({ value, display: longDate(value) });
   };
   return (
-    <form className="mt-4 flex flex-col gap-1" noValidate onSubmit={onSubmit}>
-      <div className="flex items-center gap-2">
-        <input
-          id={inputId(spec)}
-          className={FIELD}
-          type="date"
-          min={today()}
-          value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
-            setError(null);
-          }}
-        />
-        <button type="submit" className={cn(PRIMARY, "flex-none")} disabled={!value}><CalendarCheck className="size-4" strokeWidth={2.3} /> Use date</button>
-      </div>
+    <form id={inputId(spec)} className="mt-4 flex flex-col gap-2" noValidate onSubmit={onSubmit}>
+      <CalendarPicker
+        value={value}
+        min={today()}
+        onChange={(next) => {
+          setValue(next);
+          setError(null);
+        }}
+      />
+      <button type="submit" className={PRIMARY} disabled={!value}>
+        <CalendarCheck className="size-4" strokeWidth={2.3} />
+        {value ? `Use ${longDate(value)}` : "Pick a day"}
+      </button>
       <ErrorLine message={error} />
     </form>
   );
