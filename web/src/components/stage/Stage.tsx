@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { AgentState } from "@livekit/components-react";
 import { Headphones, Loader2, OctagonX, Phone, PhoneCall, PhoneOff, Plane } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CallTimer } from "./CallTimer";
 import type { MicDevices } from "@/hooks/useMicDevices";
 import { cn } from "@/lib/utils";
 import { Role } from "@/protocol";
@@ -33,15 +32,6 @@ interface Props {
   callBack: boolean;
 }
 
-const STATE_TONE: Partial<Record<AgentState, string>> = {
-  listening: "bg-glow-2 shadow-[0_0_8px_var(--glow)]",
-  speaking: "bg-glow shadow-[0_0_8px_var(--glow)]",
-  thinking: "bg-white/70",
-  connecting: "bg-white/70",
-  initializing: "bg-white/70",
-  failed: "bg-destructive",
-};
-
 export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, onCall, onMute, onPickMic, onStop, stopDisabled, actions, callBack }: Props) {
   const inCall = isInCall(call.state);
   const live = call.state === CallState.CONNECTED;
@@ -70,20 +60,17 @@ export function Stage({ call, orb, voice, caption, micLevel, orbVolume, mics, on
         <div className="flex shrink-0 items-center gap-2">{actions}</div>
       </div>
 
-      <div
+      {/* The orb shows the call state. Words appear only when something is wrong; screen readers always get them. */}
+      <p
         role="status"
         aria-live="polite"
-        className="glass mt-3 flex min-w-0 items-center gap-2 rounded-full px-3.5 py-1.5 font-mono text-[11px] tracking-[0.14em] text-foreground/75 uppercase lg:mt-0"
-      >
-        <span className={cn("size-1.5 shrink-0 rounded-full", STATE_TONE[orb] ?? "bg-muted-foreground", inCall && "animate-pulse")} />
-        <span className="truncate">{statusText}</span>
-        {call.connectedAt !== null && (
-          <>
-            <span className="text-white/20">/</span>
-            <CallTimer since={call.connectedAt} />
-          </>
+        className={cn(
+          "mt-3 text-center text-[13px] lg:mt-0",
+          call.state === CallState.ERROR ? "text-destructive" : call.state === CallState.RECONNECTING ? "text-muted-foreground" : "sr-only",
         )}
-      </div>
+      >
+        {statusText}
+      </p>
 
       {/* The orb and caption take the free space; the dock stays at the bottom like a phone call. */}
       <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-5 lg:gap-7">
