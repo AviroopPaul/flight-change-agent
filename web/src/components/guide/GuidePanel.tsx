@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Copy, X } from "lucide-react";
+import { Check, Copy, RotateCcw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BOOKINGS, CHANGE_FEE, SCENARIOS, type GuideBooking } from "./data";
 
@@ -46,7 +46,7 @@ function BookingRow({ b }: { b: GuideBooking }) {
     });
   };
   return (
-    <li className={cn("rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/[0.07]", b.blocked && "opacity-70")}>
+    <li className={cn("well rounded-[1.15rem] px-3.5 py-2.5", b.blocked && "opacity-70")}>
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -97,8 +97,8 @@ export function GuidePanel({ open, onClose }: { open: boolean; onClose: () => vo
         open ? "translate-x-0" : "-translate-x-full",
       )}
     >
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden border-r border-white/10 bg-[oklch(0.165_0.022_264/0.97)] shadow-[0_0_80px_-20px_rgb(0_0_0/0.9)] backdrop-blur-xl lg:rounded-3xl lg:border">
-        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
+      <section className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-[2rem]">
+        <header className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-5 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3">
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-medium">Demo guide</h2>
             <p className="text-[11px] text-muted-foreground">Test bookings and scenarios</p>
@@ -107,7 +107,7 @@ export function GuidePanel({ open, onClose }: { open: boolean; onClose: () => vo
             type="button"
             onClick={onClose}
             aria-label="Close demo guide"
-            className="grid size-9 place-items-center rounded-xl text-muted-foreground ring-1 ring-white/10 transition-colors outline-none hover:bg-white/[0.06] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            className="well grid size-9 place-items-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="size-4" />
           </button>
@@ -126,8 +126,8 @@ export function GuidePanel({ open, onClose }: { open: boolean; onClose: () => vo
             <span className="text-[11px] text-muted-foreground">
               {done.length}/{SCENARIOS.length}
               {done.length > 0 && (
-                <button type="button" onClick={() => (setDone([]), saveDone([]))} className="ml-2 underline-offset-2 hover:text-foreground hover:underline">
-                  Reset
+                <button type="button" onClick={() => (setDone([]), saveDone([]))} className="ml-2 inline-flex items-center gap-1 underline-offset-2 hover:text-foreground hover:underline">
+                  <RotateCcw className="size-3" /> Reset
                 </button>
               )}
             </span>
@@ -137,8 +137,11 @@ export function GuidePanel({ open, onClose }: { open: boolean; onClose: () => vo
               const ticked = done.includes(s.id);
               return (
                 <li key={s.id}>
-                  <label className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 hover:bg-white/[0.04]">
-                    <input type="checkbox" checked={ticked} onChange={() => toggle(s.id)} className="mt-0.5 size-3.5 shrink-0 accent-glow" />
+                  <label className="flex cursor-pointer items-start gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-white/[0.05]">
+                    <input type="checkbox" checked={ticked} onChange={() => toggle(s.id)} className="peer sr-only" />
+                    <span aria-hidden="true" className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full text-transparent shadow-[inset_0_0_0_1.5px_oklch(1_0_0/0.3)] transition-all peer-checked:bg-primary peer-checked:text-primary-foreground peer-checked:shadow-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+                      <Check className="size-3" strokeWidth={3} />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className={cn("flex items-center gap-2 text-[13px]", ticked && "text-muted-foreground line-through")}>
                         <span className="font-mono text-[11px] text-muted-foreground">{i + 1}</span>
